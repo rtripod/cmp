@@ -124,7 +124,7 @@ int main(void)
 			case STATE_POST_FERRIS:
 				PJOUT |= BIT1;
 				__delay_cycles(50000);
-				state_ducks(&operation);
+				state_post_ferris(&operation);
 				break;
 			case STATE_DUCKS:
 				PJOUT |= BIT2;
@@ -155,7 +155,7 @@ void state_machine(STATE *state, int operation)
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
-					*state = STATE_DUCKS;
+					*state = STATE_POST_FERRIS;
 					break;
 			}
 			break;

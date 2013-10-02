@@ -18,6 +18,14 @@ void state_finish(int *);
 
 volatile unsigned int ADCResult;
 
+void delay_ms(unsigned int delay)
+{
+	while (delay--)
+	{
+		__delay_cycles(24000);//PUT_CPU_CLOCK_SPEED_IN_HZ_DIVIDED_BY_1000_HERE
+	}
+}
+
 void SetupADC(unsigned int in_bit)
 {
 	// Configure ADC

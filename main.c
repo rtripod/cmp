@@ -7,14 +7,14 @@
 #define FINISHED_OPERATION 0
 #define CONTINUE_OPERATION 1
 
-typedef enum {STATE_IDLE, STATE_FERRIS, STATE_DUCKS, STATE_STRENGTH, STATE_FINISH} STATE;
+typedef enum {STATE_IDLE, STATE_FERRIS, STATE_PRE_DUCKS, STATE_DUCKS, STATE_STRENGTH, STATE_FINISH} STATE;
 
 void state_machine(STATE *, unsigned char);
 void state_idle(unsigned char *);
 void state_ferris(unsigned char *);
+void state_pre_ducks(unsigned char *);
 void state_ducks(unsigned char *);
 void state_strength(unsigned char *);
-void state_finish(unsigned char *);
 
 volatile unsigned int ADCResult;
 
@@ -37,6 +37,44 @@ void updateLEDs(unsigned int in_bit)
 			break;
 		case BIT4: case BIT5: case BIT6: case BIT7: 
 			P3OUT |= in_bit;
+			break;
+		default: break;
+	}
+}
+
+void updateFPGASignal(unsigned int in_bit)
+{
+	switch (in_bit)
+	{
+		case 0:		// 000
+			P3OUT &= ~(BIT0+BIT1+BIT2);
+			break;
+		case 1:		// 001
+			P3OUT |= (BIT0);
+			P3OUT &= ~(BIT1+BIT2);
+			break;
+		case 2:		// 010
+			P3OUT |= (BIT1);
+			P3OUT &= ~(BIT0+BIT2);
+			break;
+		case 3:		// 011
+			P3OUT |= (BIT0+BIT1);
+			P3OUT &= ~(BIT2);
+			break;
+		case 4:		// 100
+			P3OUT |= (BIT2);
+			P3OUT &= ~(BIT0+BIT1);
+			break;
+		case 5:		// 101
+			P3OUT |= (BIT0+BIT2);
+			P3OUT &= ~(BIT1);
+			break;
+		case 6:		// 110
+			P3OUT |= (BIT1+BIT2);
+			P3OUT &= ~(BIT0);
+			break;
+		case 7:		// 111
+			P3OUT |= (BIT0+BIT1+BIT2);
 			break;
 		default: break;
 	}
@@ -107,13 +145,18 @@ int main(void)
 	PJOUT &= ~(BIT0+BIT1+BIT2+BIT3);
 	P3OUT &= ~(BIT4+BIT5+BIT6+BIT7);
 	
+	// Setup FPGA state signal
+	P3DIR |= (BIT0+BIT1+BIT2);
+	P3OUT &= ~(BIT0+BIT1+BIT2);
+	
 	// Setup geared motor
 	P2DIR |= BIT0;
 	P2OUT &= ~BIT0;
 	
-	// Inital state
+	// Initial state
 	STATE state = STATE_IDLE;
 	PJOUT |= BIT0;
+	updateFPGASignal(0);
 	SetupADC(BIT0);
 	
 	unsigned char operation;
@@ -129,6 +172,10 @@ int main(void)
 				delayMillis(50);
 				state_ferris(&operation);
 				break;
+			case STATE_PRE_DUCKS:
+				delayMillis(50);
+				state_pre_ducks(&operation);
+				break;
 			case STATE_DUCKS:
 				delayMillis(50);
 				state_ducks(&operation);
@@ -136,10 +183,6 @@ int main(void)
 			case STATE_STRENGTH:
 				delayMillis(50);
 				state_strength(&operation);
-				break;
-			case STATE_FINISH:
-				delayMillis(50);
-				state_finish(&operation);
 				break;
 		}
 		delayMillis(50);
@@ -157,6 +200,7 @@ void state_machine(STATE *state, unsigned char operation)
 				case FINISHED_OPERATION:
 					*state = STATE_FERRIS;
 					updateLEDs(BIT1);
+					updateFPGASignal(1);
 					SetupADC(BIT1);
 					P2OUT |= BIT0;		// Turn on geared motor
 					break;
@@ -167,9 +211,22 @@ void state_machine(STATE *state, unsigned char operation)
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
-					*state = STATE_DUCKS;
+					*state = STATE_PRE_DUCKS;
 					updateLEDs(BIT2);
+					updateFPGASignal(2);
 					SetupADC(BIT2);
+					break;
+				default: break;
+			}
+			break;
+		case STATE_PRE_DUCKS:
+			switch(operation)
+			{
+				case FINISHED_OPERATION:
+					*state = STATE_DUCKS;
+					updateLEDs(BIT3);
+					updateFPGASignal(3);
+					SetupADC(BIT3);
 					break;
 				default: break;
 			}
@@ -179,8 +236,9 @@ void state_machine(STATE *state, unsigned char operation)
 			{
 				case FINISHED_OPERATION:
 					*state = STATE_STRENGTH;
-					updateLEDs(BIT3);
-					SetupADC(BIT3);
+					updateLEDs(BIT4);
+					updateFPGASignal(4);
+					SetupADC(BIT4);
 					break;
 				default: break;
 			}
@@ -189,19 +247,9 @@ void state_machine(STATE *state, unsigned char operation)
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
-					*state = STATE_FINISH;
-					updateLEDs(BIT4);
-					SetupADC(BIT4);
-					break;
-				default: break;
-			}
-			break;
-		case STATE_FINISH:
-			switch(operation)
-			{
-				case FINISHED_OPERATION:
 					*state = STATE_IDLE;
 					updateLEDs(BIT0);
+					updateFPGASignal(0);
 					SetupADC(BIT0);
 					P2OUT &= ~BIT0;		// Turn off geared motor
 					break;
@@ -233,7 +281,7 @@ void state_ferris(unsigned char *operation)
 		*operation = CONTINUE_OPERATION;
 }
 
-void state_ducks(unsigned char *operation)
+void state_pre_ducks(unsigned char *operation)
 {
 	delayMillis(50);
 	SetupADC(BIT2);
@@ -244,7 +292,7 @@ void state_ducks(unsigned char *operation)
 		*operation = CONTINUE_OPERATION;
 }
 
-void state_strength(unsigned char *operation)
+void state_ducks(unsigned char *operation)
 {
 	delayMillis(50);
 	SetupADC(BIT3);
@@ -255,7 +303,7 @@ void state_strength(unsigned char *operation)
 		*operation = CONTINUE_OPERATION;
 }
 
-void state_finish(unsigned char *operation)
+void state_strength(unsigned char *operation)
 {
 	delayMillis(50);
 	SetupADC(BIT4);

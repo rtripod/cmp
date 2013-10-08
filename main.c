@@ -4,10 +4,21 @@
 #define LINE_SENSOR_MAX 300
 #define FORCE_SENSOR_MAX 900
 
+#define STATE_DIR P3DIR
+#define STATE_OUT P3OUT
+#define STATE_LED0 BIT4
+#define STATE_LED1 BIT5
+#define STATE_LED2 BIT6
+#define STATE_LED3 BIT7
+
+#define GEARED_DIR P2DIR
+#define GEARED_OUT P2OUT
+#define GEARED_PIN BIT0
+
 #define FINISHED_OPERATION 0
 #define CONTINUE_OPERATION 1
 
-typedef enum {STATE_IDLE, STATE_FERRIS, STATE_PRE_DUCKS, STATE_DUCKS, STATE_STRENGTH, STATE_FINISH} STATE;
+typedef enum {IDLE, FERRIS, PRE_DUCKS, DUCKS, STRENGTH, FINISH} STATE;
 
 void state_machine(STATE *, unsigned char);
 void state_idle(unsigned char *);
@@ -26,55 +37,39 @@ void delayMillis(unsigned int delay)
 	}
 }
 
-void updateLEDs(unsigned int in_bit)
-{
-	PJOUT &= ~(BIT0+BIT1+BIT2+BIT3);
-	P3OUT &= ~(BIT4+BIT5+BIT6+BIT7);
-	switch (in_bit)
-	{
-		case BIT0: case BIT1: case BIT2: case BIT3: 
-			PJOUT |= in_bit;
-			break;
-		case BIT4: case BIT5: case BIT6: case BIT7: 
-			P3OUT |= in_bit;
-			break;
-		default: break;
-	}
-}
-
 void updateFPGASignal(unsigned int in_bit)
 {
 	switch (in_bit)
 	{
 		case 0:		// 000
-			P3OUT &= ~(BIT0+BIT1+BIT2);
+			STATE_OUT &= ~(STATE_LED0+STATE_LED1+STATE_LED2);
 			break;
 		case 1:		// 001
-			P3OUT |= (BIT0);
-			P3OUT &= ~(BIT1+BIT2);
+			STATE_OUT |= (STATE_LED0);
+			STATE_OUT &= ~(STATE_LED1+STATE_LED2);
 			break;
 		case 2:		// 010
-			P3OUT |= (BIT1);
-			P3OUT &= ~(BIT0+BIT2);
+			STATE_OUT |= (STATE_LED1);
+			STATE_OUT &= ~(STATE_LED0+STATE_LED2);
 			break;
 		case 3:		// 011
-			P3OUT |= (BIT0+BIT1);
-			P3OUT &= ~(BIT2);
+			STATE_OUT |= (STATE_LED0+STATE_LED1);
+			STATE_OUT &= ~(STATE_LED2);
 			break;
 		case 4:		// 100
-			P3OUT |= (BIT2);
-			P3OUT &= ~(BIT0+BIT1);
+			STATE_OUT |= (STATE_LED2);
+			STATE_OUT &= ~(STATE_LED0+STATE_LED1);
 			break;
 		case 5:		// 101
-			P3OUT |= (BIT0+BIT2);
-			P3OUT &= ~(BIT1);
+			STATE_OUT |= (STATE_LED0+STATE_LED2);
+			STATE_OUT &= ~(STATE_LED1);
 			break;
 		case 6:		// 110
-			P3OUT |= (BIT1+BIT2);
-			P3OUT &= ~(BIT0);
+			STATE_OUT |= (STATE_LED1+STATE_LED2);
+			STATE_OUT &= ~(STATE_LED0);
 			break;
 		case 7:		// 111
-			P3OUT |= (BIT0+BIT1+BIT2);
+			STATE_OUT |= (STATE_LED0+STATE_LED1+STATE_LED2);
 			break;
 		default: break;
 	}
@@ -139,23 +134,16 @@ int main(void)
 	P1OUT &= ~BIT4;      
 	P1DIR |= BIT4; 
 	
-	// Setup onboard LEDs
-	PJDIR |= (BIT0+BIT1+BIT2+BIT3);
-	P3DIR |= (BIT4+BIT5+BIT6+BIT7);
-	PJOUT &= ~(BIT0+BIT1+BIT2+BIT3);
-	P3OUT &= ~(BIT4+BIT5+BIT6+BIT7);
-	
 	// Setup FPGA state signal
-	P3DIR |= (BIT0+BIT1+BIT2);
-	P3OUT &= ~(BIT0+BIT1+BIT2);
+	STATE_DIR |= (BIT4+BIT5+BIT6+BIT7);
+	STATE_OUT &= ~(BIT4+BIT5+BIT6+BIT7);
 	
 	// Setup geared motor
-	P2DIR |= BIT0;
-	P2OUT &= ~BIT0;
+	GEARED_DIR |= GEARED_PIN;
+	GEARED_OUT &= ~GEARED_PIN;
 	
 	// Initial state
-	STATE state = STATE_IDLE;
-	PJOUT |= BIT0;
+	STATE state = IDLE;
 	updateFPGASignal(0);
 	SetupADC(BIT0);
 	
@@ -164,23 +152,23 @@ int main(void)
 	{
 		switch(state)
 		{
-			case STATE_IDLE:
+			case IDLE:
 				delayMillis(50);
 				state_idle(&operation);
 				break;
-			case STATE_FERRIS:
+			case FERRIS:
 				delayMillis(50);
 				state_ferris(&operation);
 				break;
-			case STATE_PRE_DUCKS:
+			case PRE_DUCKS:
 				delayMillis(50);
 				state_pre_ducks(&operation);
 				break;
-			case STATE_DUCKS:
+			case DUCKS:
 				delayMillis(50);
 				state_ducks(&operation);
 				break;
-			case STATE_STRENGTH:
+			case STRENGTH:
 				delayMillis(50);
 				state_strength(&operation);
 				break;
@@ -194,12 +182,11 @@ void state_machine(STATE *state, unsigned char operation)
 {
 	switch(*state)
 	{
-		case STATE_IDLE:
+		case IDLE:
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
-					*state = STATE_FERRIS;
-					updateLEDs(BIT1);
+					*state = FERRIS;
 					updateFPGASignal(1);
 					SetupADC(BIT1);
 					P2OUT |= BIT0;		// Turn on geared motor
@@ -207,48 +194,44 @@ void state_machine(STATE *state, unsigned char operation)
 				default: break;
 			}
 			break;
-		case STATE_FERRIS:
+		case FERRIS:
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
-					*state = STATE_PRE_DUCKS;
-					updateLEDs(BIT2);
+					*state = PRE_DUCKS;
 					updateFPGASignal(2);
 					SetupADC(BIT2);
 					break;
 				default: break;
 			}
 			break;
-		case STATE_PRE_DUCKS:
+		case PRE_DUCKS:
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
-					*state = STATE_DUCKS;
-					updateLEDs(BIT3);
+					*state = DUCKS;
 					updateFPGASignal(3);
 					SetupADC(BIT3);
 					break;
 				default: break;
 			}
 			break;
-		case STATE_DUCKS:
+		case DUCKS:
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
-					*state = STATE_STRENGTH;
-					updateLEDs(BIT4);
+					*state = STRENGTH;
 					updateFPGASignal(4);
 					SetupADC(BIT4);
 					break;
 				default: break;
 			}
 			break;
-		case STATE_STRENGTH:
+		case STRENGTH:
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
-					*state = STATE_IDLE;
-					updateLEDs(BIT0);
+					*state = IDLE;
 					updateFPGASignal(0);
 					SetupADC(BIT0);
 					P2OUT &= ~BIT0;		// Turn off geared motor

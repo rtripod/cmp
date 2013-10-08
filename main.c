@@ -37,44 +37,6 @@ void delayMillis(unsigned int delay)
 	}
 }
 
-void updateFPGASignal(unsigned int in_bit)
-{
-	switch (in_bit)
-	{
-		case 0:		// 000
-			STATE_OUT &= ~(STATE_LED0+STATE_LED1+STATE_LED2);
-			break;
-		case 1:		// 001
-			STATE_OUT |= (STATE_LED0);
-			STATE_OUT &= ~(STATE_LED1+STATE_LED2);
-			break;
-		case 2:		// 010
-			STATE_OUT |= (STATE_LED1);
-			STATE_OUT &= ~(STATE_LED0+STATE_LED2);
-			break;
-		case 3:		// 011
-			STATE_OUT |= (STATE_LED0+STATE_LED1);
-			STATE_OUT &= ~(STATE_LED2);
-			break;
-		case 4:		// 100
-			STATE_OUT |= (STATE_LED2);
-			STATE_OUT &= ~(STATE_LED0+STATE_LED1);
-			break;
-		case 5:		// 101
-			STATE_OUT |= (STATE_LED0+STATE_LED2);
-			STATE_OUT &= ~(STATE_LED1);
-			break;
-		case 6:		// 110
-			STATE_OUT |= (STATE_LED1+STATE_LED2);
-			STATE_OUT &= ~(STATE_LED0);
-			break;
-		case 7:		// 111
-			STATE_OUT |= (STATE_LED0+STATE_LED1+STATE_LED2);
-			break;
-		default: break;
-	}
-}
-
 void SetupADC(unsigned int in_bit)
 {
 	// Configure ADC
@@ -144,7 +106,7 @@ int main(void)
 	
 	// Initial state
 	STATE state = IDLE;
-	updateFPGASignal(0);
+	STATE_OUT = 0x00;
 	SetupADC(BIT0);
 	
 	unsigned char operation;
@@ -187,7 +149,7 @@ void state_machine(STATE *state, unsigned char operation)
 			{
 				case FINISHED_OPERATION:
 					*state = FERRIS;
-					updateFPGASignal(1);
+					STATE_OUT = 0x10;
 					SetupADC(BIT1);
 					P2OUT |= BIT0;		// Turn on geared motor
 					break;
@@ -199,7 +161,7 @@ void state_machine(STATE *state, unsigned char operation)
 			{
 				case FINISHED_OPERATION:
 					*state = PRE_DUCKS;
-					updateFPGASignal(2);
+					STATE_OUT = 0x20;
 					SetupADC(BIT2);
 					break;
 				default: break;
@@ -210,7 +172,7 @@ void state_machine(STATE *state, unsigned char operation)
 			{
 				case FINISHED_OPERATION:
 					*state = DUCKS;
-					updateFPGASignal(3);
+					STATE_OUT = 0x30;
 					SetupADC(BIT3);
 					break;
 				default: break;
@@ -221,7 +183,7 @@ void state_machine(STATE *state, unsigned char operation)
 			{
 				case FINISHED_OPERATION:
 					*state = STRENGTH;
-					updateFPGASignal(4);
+					STATE_OUT = 0x40;
 					SetupADC(BIT4);
 					break;
 				default: break;
@@ -232,7 +194,7 @@ void state_machine(STATE *state, unsigned char operation)
 			{
 				case FINISHED_OPERATION:
 					*state = IDLE;
-					updateFPGASignal(0);
+					STATE_OUT = 0x00;
 					SetupADC(BIT0);
 					P2OUT &= ~BIT0;		// Turn off geared motor
 					break;

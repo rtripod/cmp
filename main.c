@@ -18,13 +18,15 @@
 #define FINISHED_OPERATION 0
 #define CONTINUE_OPERATION 1
 
-typedef enum {IDLE, FERRIS, PRE_DUCKS, DUCKS, STRENGTH, FINISH} STATE;
+typedef enum {IDLE = 0x00, FERRIS = 0x10, PRE_DUCKS = 0x20, DUCK1 = 0x30, DUCK2 = 0x40, DUCK3 = 0x50, STRENGTH = 0x60} STATE;
 
 void state_machine(STATE *, unsigned char);
 void state_idle(unsigned char *);
 void state_ferris(unsigned char *);
 void state_pre_ducks(unsigned char *);
-void state_ducks(unsigned char *);
+void state_duck1(unsigned char *);
+void state_duck2(unsigned char *);
+void state_duck3(unsigned char *);
 void state_strength(unsigned char *);
 
 volatile unsigned int ADCResult;
@@ -106,7 +108,7 @@ int main(void)
 	
 	// Initial state
 	STATE state = IDLE;
-	STATE_OUT = 0x00;
+	STATE_OUT = IDLE;
 	SetupADC(BIT0);
 	
 	unsigned char operation;
@@ -126,9 +128,17 @@ int main(void)
 				delayMillis(50);
 				state_pre_ducks(&operation);
 				break;
-			case DUCKS:
+			case DUCK1:
 				delayMillis(50);
-				state_ducks(&operation);
+				state_duck1(&operation);
+				break;
+			case DUCK2:
+				delayMillis(50);
+				state_duck2(&operation);
+				break;
+			case DUCK3:
+				delayMillis(50);
+				state_duck3(&operation);
 				break;
 			case STRENGTH:
 				delayMillis(50);
@@ -149,7 +159,7 @@ void state_machine(STATE *state, unsigned char operation)
 			{
 				case FINISHED_OPERATION:
 					*state = FERRIS;
-					STATE_OUT = 0x10;
+					STATE_OUT = FERRIS;
 					SetupADC(BIT1);
 					P2OUT |= BIT0;		// Turn on geared motor
 					break;
@@ -161,7 +171,7 @@ void state_machine(STATE *state, unsigned char operation)
 			{
 				case FINISHED_OPERATION:
 					*state = PRE_DUCKS;
-					STATE_OUT = 0x20;
+					STATE_OUT = PRE_DUCKS;
 					SetupADC(BIT2);
 					break;
 				default: break;
@@ -171,19 +181,39 @@ void state_machine(STATE *state, unsigned char operation)
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
-					*state = DUCKS;
-					STATE_OUT = 0x30;
+					*state = DUCK1;
+					STATE_OUT = DUCK1;
+					break;
+				default: break;
+			}
+			break;
+		case DUCK1:
+			switch(operation)
+			{
+				case FINISHED_OPERATION:
+					*state = DUCK2;
+					STATE_OUT = DUCK2;
+					break;
+				default: break;
+			}
+			break;
+		case DUCK2:
+			switch(operation)
+			{
+				case FINISHED_OPERATION:
+					*state = DUCK3;
+					STATE_OUT = DUCK3;
 					SetupADC(BIT3);
 					break;
 				default: break;
 			}
 			break;
-		case DUCKS:
+		case DUCK3:
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
 					*state = STRENGTH;
-					STATE_OUT = 0x40;
+					STATE_OUT = STRENGTH;
 					SetupADC(BIT4);
 					break;
 				default: break;
@@ -194,9 +224,9 @@ void state_machine(STATE *state, unsigned char operation)
 			{
 				case FINISHED_OPERATION:
 					*state = IDLE;
-					STATE_OUT = 0x00;
+					STATE_OUT = IDLE;
 					SetupADC(BIT0);
-					P2OUT &= ~BIT0;		// Turn off geared motor
+					GEARED_OUT &= ~GEARED_PIN;		// Turn off geared motor
 					break;
 				default: break;
 			}
@@ -218,7 +248,6 @@ void state_idle(unsigned char *operation)
 void state_ferris(unsigned char *operation)
 {
 	delayMillis(50);
-	SetupADC(BIT1);
 	TakeADCMeas();
 	if(ADCResult < FORCE_SENSOR_MAX)
 		*operation = FINISHED_OPERATION;
@@ -229,7 +258,6 @@ void state_ferris(unsigned char *operation)
 void state_pre_ducks(unsigned char *operation)
 {
 	delayMillis(50);
-	SetupADC(BIT2);
 	TakeADCMeas();
 	if(ADCResult < FORCE_SENSOR_MAX)
 		*operation = FINISHED_OPERATION;
@@ -237,21 +265,30 @@ void state_pre_ducks(unsigned char *operation)
 		*operation = CONTINUE_OPERATION;
 }
 
-void state_ducks(unsigned char *operation)
+void state_duck1(unsigned char *operation)
+{
+	delayMillis(100);
+	*operation = FINISHED_OPERATION;
+}
+
+void state_duck2(unsigned char *operation)
+{
+	delayMillis(100);
+	*operation = FINISHED_OPERATION;
+}
+
+void state_duck3(unsigned char *operation)
 {
 	delayMillis(50);
-	SetupADC(BIT3);
 	TakeADCMeas();
 	if(ADCResult < FORCE_SENSOR_MAX)
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;
 }
-
 void state_strength(unsigned char *operation)
 {
 	delayMillis(50);
-	SetupADC(BIT4);
 	TakeADCMeas();
 	if(ADCResult < FORCE_SENSOR_MAX)
 		*operation = FINISHED_OPERATION;

@@ -1,3 +1,5 @@
+#include "main.h"
+
 void delayMillis(unsigned int delay)
 {
 	while (delay--)

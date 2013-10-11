@@ -47,6 +47,23 @@ void pwmControl(unsigned char in_component, int duty_cycle)
 	}
 }
 
+void shiftOut(unsigned char in_data)
+{
+	SHIFTER_OUT &= ~SHIFT_RCK;
+	int ii = 0;
+	for (ii = 0; ii < 8; ++ii)
+	{
+		SHIFTER_OUT &= ~SHIFT_SRCK;
+		if (in_data & 0x80)
+			SHIFTER_OUT |= SHIFT_SERIN;
+		else
+			SHIFTER_OUT &= ~SHIFT_SERIN;
+		in_data = in_data << 1;
+		SHIFTER_OUT |= SHIFT_SRCK;
+	}
+	SHIFTER_OUT |= SHIFT_RCK;
+}
+
 void SetupADC(unsigned char in_port, unsigned char in_bit)
 {
 	// Configure ADC
@@ -59,13 +76,13 @@ void SetupADC(unsigned char in_port, unsigned char in_bit)
 		case IR_PORT:
 			IR_SEL1 |= in_bit;
 			IR_SEL0 |= in_bit;
-			in_bit = in_bit << 6;			// Shift above BIT5 for below case statement (avoids nested control flow)
+			//in_bit = in_bit << 6;			// Shift above BIT5 for below case statement (avoids nested control flow)
 			break;
 		default: break;
 	}
 
 	// Allow for settling delay 
-	delayMillis(50);
+	delayMillis(DEFAULT_DELAY);
 
 	// Configure ADC
 	ADC10CTL0 &= ~ADC10ENC; 
@@ -73,33 +90,44 @@ void SetupADC(unsigned char in_port, unsigned char in_bit)
 	ADC10CTL1 = ADC10SHS_0 + ADC10SHP + ADC10SSEL_0; 
 	ADC10CTL2 = ADC10RES;					// 10-bit conversion results
 	
-	switch (in_bit)
+	switch (in_port)
 	{
-		case BIT0:
-			ADC10MCTL0 = ADC10INCH_0;
+		case FSR_PORT:
+			switch (in_bit)
+			{
+				case BIT0:
+					ADC10MCTL0 = ADC10INCH_0;
+					break;
+				case BIT1:
+					ADC10MCTL0 = ADC10INCH_1;
+					break;
+				case BIT2:
+					ADC10MCTL0 = ADC10INCH_2;
+					break;
+				case BIT3:
+					ADC10MCTL0 = ADC10INCH_3;
+					break;
+				case BIT4:
+					ADC10MCTL0 = ADC10INCH_4;
+					break;
+				case BIT5:
+					ADC10MCTL0 = ADC10INCH_5;
+					break;
+			}
 			break;
-		case BIT1:
-			ADC10MCTL0 = ADC10INCH_1;
+		case IR_PORT:
+			switch (in_bit)
+			{
+				case BIT3:
+					ADC10MCTL0 = ADC10INCH_12;
+					break;
+				case BIT4:
+					ADC10MCTL0 = ADC10INCH_13;
+					break;
+			}
 			break;
-		case BIT2:
-			ADC10MCTL0 = ADC10INCH_2;
-			break;
-		case BIT3:
-			ADC10MCTL0 = ADC10INCH_3;
-			break;
-		case BIT4:
-			ADC10MCTL0 = ADC10INCH_4;
-			break;
-		case BIT5:
-			ADC10MCTL0 = ADC10INCH_5;
-			break;
-		case BIT6:
-			ADC10MCTL0 = ADC10INCH_12;
-			break;
-		case BIT7:
-			ADC10MCTL0 = ADC10INCH_13;
-			break;
-	}	
+		default: break;
+	}
 	
 	ADC10IE = ADC10IE0;						// Enable ADC conv complete interrupt
 }
@@ -131,8 +159,8 @@ int main(void)
 	STATE_OUT &= ~(BIT4+BIT5+BIT6+BIT7);
 	
 	// Setup geared motor
-	GEARED_DIR |= GEARED_PIN;
-	GEARED_OUT &= ~GEARED_PIN;
+	GEARED_DIR |= GEARED_MOTOR;
+	GEARED_OUT &= ~GEARED_MOTOR;
 	
 	// Initial state
 	STATE state = IDLE;
@@ -150,41 +178,46 @@ int main(void)
 	LIFT_DIR |= LIFT_MOTOR;
 	LIFT_SEL0 |= LIFT_MOTOR;
 	
+	// Setup shifter
+	SHIFTER_DIR |= (SHIFT_RCK+SHIFT_SRCK+SHIFT_SERIN);
+	SHIFTER_OUT &= ~(SHIFT_RCK+SHIFT_SRCK+SHIFT_SERIN);
+	shiftOut(0);
+	
 	unsigned char operation;
 	while(1)
 	{
 		switch(state)
 		{
 			case IDLE:
-				delayMillis(50);
+				delayMillis(DEFAULT_DELAY);
 				state_idle(&operation);
 				break;
 			case FERRIS:
-				delayMillis(50);
+				delayMillis(DEFAULT_DELAY);
 				state_ferris(&operation);
 				break;
 			case PRE_DUCKS:
-				delayMillis(50);
+				delayMillis(DEFAULT_DELAY);
 				state_pre_ducks(&operation);
 				break;
 			case DUCK1:
-				delayMillis(50);
+				delayMillis(DEFAULT_DELAY);
 				state_duck1(&operation);
 				break;
 			case DUCK2:
-				delayMillis(50);
+				delayMillis(DEFAULT_DELAY);
 				state_duck2(&operation);
 				break;
 			case DUCK3:
-				delayMillis(50);
+				delayMillis(DEFAULT_DELAY);
 				state_duck3(&operation);
 				break;
 			case STRENGTH:
-				delayMillis(50);
+				delayMillis(DEFAULT_DELAY);
 				state_strength(&operation);
 				break;
 		}
-		delayMillis(50);
+		delayMillis(DEFAULT_DELAY);
 		state_machine(&state, operation);
 	}
 }
@@ -200,7 +233,7 @@ void state_machine(STATE *state, unsigned char operation)
 					*state = FERRIS;
 					STATE_OUT = FERRIS;
 					SetupADC(FSR_PORT, PRE_DUCKS_FSR);
-					GEARED_OUT |= GEARED_PIN;		// Turn on geared motor
+					GEARED_OUT |= GEARED_MOTOR;		// Turn on geared motor
 					break;
 				default: break;
 			}
@@ -269,7 +302,7 @@ void state_machine(STATE *state, unsigned char operation)
 					SetupADC(FSR_PORT, ENTRY_FSR);
 					pwmControl(DUCK1_SERVO, 1000);
 					pwmControl(DUCK2_SERVO, 1000);
-					GEARED_OUT &= ~GEARED_PIN;		// Turn off geared motor
+					GEARED_OUT &= ~GEARED_MOTOR;		// Turn off geared motor
 					break;
 				default: break;
 			}
@@ -280,7 +313,7 @@ void state_machine(STATE *state, unsigned char operation)
 void state_idle(unsigned char *operation)
 {
 	
-	delayMillis(50);
+	delayMillis(DEFAULT_DELAY);
 	TakeADCMeas();
 	if(ADCResult < FORCE_SENSOR_MAX)
 		*operation = FINISHED_OPERATION;
@@ -290,7 +323,7 @@ void state_idle(unsigned char *operation)
 
 void state_ferris(unsigned char *operation)
 {
-	delayMillis(50);
+	delayMillis(DEFAULT_DELAY);
 	TakeADCMeas();
 	if(ADCResult < FORCE_SENSOR_MAX)
 		*operation = FINISHED_OPERATION;
@@ -300,9 +333,9 @@ void state_ferris(unsigned char *operation)
 
 void state_pre_ducks(unsigned char *operation)
 {
-	delayMillis(50);
+	delayMillis(DEFAULT_DELAY);
 	TakeADCMeas();
-	if(ADCResult < FORCE_SENSOR_MAX)
+	if(ADCResult < LINE_SENSOR_MAX)
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;
@@ -322,16 +355,31 @@ void state_duck2(unsigned char *operation)
 
 void state_duck3(unsigned char *operation)
 {
-	delayMillis(50);
+	delayMillis(DEFAULT_DELAY);
 	TakeADCMeas();
-	if(ADCResult < FORCE_SENSOR_MAX)
+	if(ADCResult < LINE_SENSOR_MAX)
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;
 }
 void state_strength(unsigned char *operation)
 {
-	delayMillis(50);
+	delayMillis(DEFAULT_DELAY);
+	unsigned char ii = 0x01;
+	shiftOut(ii);
+	delayMillis(LED_RISE_DELAY);
+	while (ii < 0xFF)
+	{
+		ii = (ii << 1) + 0x01;
+		shiftOut(ii);
+		delayMillis(LED_RISE_DELAY);
+	}
+	while (ii > 0x00)
+	{
+		ii = (ii >> 1);
+		shiftOut(ii);
+		delayMillis(LED_FALL_DELAY);
+	}
 	TakeADCMeas();
 	if(ADCResult < FORCE_SENSOR_MAX)
 		*operation = FINISHED_OPERATION;

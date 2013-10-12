@@ -37,12 +37,6 @@ void pwmControl(unsigned char in_component, int duty_cycle)
 			TB1CCR1 = duty_cycle;						// CCR1 PWM duty cycle
 			TB1CTL = TBSSEL_2 + MC_1 + TBCLR;			// SMCLK, up mode, clear TBR
 			break;
-		case LIFT_MOTOR:
-			TB2CCR0 = 20000 - 1;						// PWM Period
-			TB2CCTL1 = OUTMOD_7;						// CCR1 reset/set
-			TB2CCR1 = duty_cycle;						// CCR1 PWM duty cycle
-			TB2CTL = TBSSEL_2 + MC_1 + TBCLR;			// SMCLK, up mode, clear TBR
-			break;
 		default: break;
 	}
 }
@@ -62,6 +56,29 @@ void shiftOut(unsigned char in_data)
 		SHIFTER_OUT |= SHIFT_SRCK;
 	}
 	SHIFTER_OUT |= SHIFT_RCK;
+}
+
+void strengthLEDs(unsigned char max_led)
+{
+	unsigned char ii = 0x01;
+	LIFT_OUT |= LIFT_DIN1;
+	shiftOut(ii);
+	delayMillis(LED_RISE_DELAY);
+	while (ii < max_led)
+	{
+		ii = (ii << 1) + 0x01;
+		shiftOut(ii);
+		delayMillis(LED_RISE_DELAY);
+	}
+	LIFT_OUT &= ~LIFT_DIN1;
+	delayMillis(DEFAULT_DELAY);
+	LIFT_OUT |= LIFT_DIN2;
+	while (ii > 0x00)
+	{
+		ii = (ii >> 1);
+		shiftOut(ii);
+		delayMillis(LED_FALL_DELAY);
+	}
 }
 
 void SetupADC(unsigned char in_port, unsigned char in_bit)
@@ -162,25 +179,30 @@ int main(void)
 	GEARED_DIR |= GEARED_MOTOR;
 	GEARED_OUT &= ~GEARED_MOTOR;
 	
+	// Setup servos
+	SERVO_DIR |= (DUCK1_SERVO+DUCK2_SERVO+DUCK3_SERVO+STRENGTH_SERVO);
+	SERVO_SEL0 |= (DUCK1_SERVO+DUCK2_SERVO+DUCK3_SERVO+STRENGTH_SERVO);
+	
+	// Setup wave motor
+	WAVE_DIR |= WAVE_DIN;
+	WAVE_OUT &= ~WAVE_DIN;
+	
+	// Setup lift motor
+	LIFT_DIR |= (LIFT_DIN1+LIFT_DIN2);
+	LIFT_OUT &= ~(LIFT_DIN1+LIFT_DIN2);
+	
+	// Setup shifter
+	SHIFTER_DIR |= (SHIFT_RCK+SHIFT_SRCK+SHIFT_SERIN);
+	SHIFTER_OUT &= ~(SHIFT_RCK+SHIFT_SRCK+SHIFT_SERIN);
+	
 	// Initial state
 	STATE state = IDLE;
 	STATE_OUT = IDLE;
 	SetupADC(FSR_PORT, BIT1);
 	
-	// Setup servos
-	SERVO_DIR |= (DUCK1_SERVO+DUCK2_SERVO);
-	SERVO_SEL0 |= (DUCK1_SERVO+DUCK2_SERVO);
-	
 	pwmControl(DUCK1_SERVO, 1000);
 	pwmControl(DUCK2_SERVO, 1000);
-	
-	// Setup lift motor
-	LIFT_DIR |= LIFT_MOTOR;
-	LIFT_SEL0 |= LIFT_MOTOR;
-	
-	// Setup shifter
-	SHIFTER_DIR |= (SHIFT_RCK+SHIFT_SRCK+SHIFT_SERIN);
-	SHIFTER_OUT &= ~(SHIFT_RCK+SHIFT_SRCK+SHIFT_SERIN);
+		
 	shiftOut(0);
 	
 	unsigned char operation;
@@ -212,9 +234,25 @@ int main(void)
 				delayMillis(DEFAULT_DELAY);
 				state_duck3(&operation);
 				break;
-			case STRENGTH:
+			case PRE_STRENGTH:
 				delayMillis(DEFAULT_DELAY);
-				state_strength(&operation);
+				state_pre_strength(&operation);
+				break;
+			case STRENGTH1:
+				delayMillis(DEFAULT_DELAY);
+				state_strength(0x0F, &operation);
+				break;
+			case STRENGTH2:
+				delayMillis(DEFAULT_DELAY);
+				state_strength(0x3F, &operation);
+				break;
+			case STRENGTH3:
+				delayMillis(DEFAULT_DELAY);
+				state_strength(0xFF, &operation);
+				break;
+			case POST_STRENGTH:
+				delayMillis(DEFAULT_DELAY);
+				state_post_strength(&operation);
 				break;
 		}
 		delayMillis(DEFAULT_DELAY);
@@ -231,7 +269,7 @@ void state_machine(STATE *state, unsigned char operation)
 			{
 				case FINISHED_OPERATION:
 					*state = FERRIS;
-					STATE_OUT = FERRIS;
+					STATE_OUT = *state;
 					SetupADC(FSR_PORT, PRE_DUCKS_FSR);
 					GEARED_OUT |= GEARED_MOTOR;		// Turn on geared motor
 					break;
@@ -243,7 +281,8 @@ void state_machine(STATE *state, unsigned char operation)
 			{
 				case FINISHED_OPERATION:
 					*state = PRE_DUCKS;
-					STATE_OUT = PRE_DUCKS;
+					STATE_OUT = *state;
+					WAVE_OUT |= WAVE_DIN;
 					SetupADC(IR_PORT, DUCK_IR);
 					break;
 				default: break;
@@ -254,7 +293,7 @@ void state_machine(STATE *state, unsigned char operation)
 			{
 				case FINISHED_OPERATION:
 					*state = DUCK1;
-					STATE_OUT = DUCK1;
+					STATE_OUT = *state;
 					pwmControl(DUCK1_SERVO, 1500);
 					break;
 				default: break;
@@ -265,7 +304,7 @@ void state_machine(STATE *state, unsigned char operation)
 			{
 				case FINISHED_OPERATION:
 					*state = DUCK2;
-					STATE_OUT = DUCK2;
+					STATE_OUT = *state;
 					pwmControl(DUCK2_SERVO, 1500);
 					break;
 				default: break;
@@ -276,8 +315,7 @@ void state_machine(STATE *state, unsigned char operation)
 			{
 				case FINISHED_OPERATION:
 					*state = DUCK3;
-					STATE_OUT = DUCK3;
-					SetupADC(IR_PORT, STRENGTH_IR);
+					STATE_OUT = *state;
 					break;
 				default: break;
 			}
@@ -286,23 +324,67 @@ void state_machine(STATE *state, unsigned char operation)
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
-					*state = STRENGTH;
-					STATE_OUT = STRENGTH;
+					*state = PRE_STRENGTH;
+					STATE_OUT = *state;
+					SetupADC(IR_PORT, STRENGTH_IR);
+					break;
+				default: break;
+			}
+			break;
+		case PRE_STRENGTH:
+			switch(operation)
+			{
+				case FINISHED_OPERATION:
+					*state = STRENGTH1;
+					STATE_OUT = *state;
+					break;
+				default: break;
+			}
+			break;
+		case STRENGTH1:
+			switch(operation)
+			{
+				case FINISHED_OPERATION:
+					*state = STRENGTH2;
+					STATE_OUT = *state;
+					break;
+				default: break;
+			}
+			break;
+		case STRENGTH2:
+			switch(operation)
+			{
+				case FINISHED_OPERATION:
+					*state = STRENGTH3;
+					STATE_OUT = *state;
+					break;
+				default: break;
+			}
+			break;
+		case STRENGTH3:
+			switch(operation)
+			{
+				case FINISHED_OPERATION:
+					*state = POST_STRENGTH;
+					STATE_OUT = *state;
 					SetupADC(FSR_PORT, EXIT_FSR);
 					break;
 				default: break;
 			}
 			break;
-		case STRENGTH:
+		case POST_STRENGTH:
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
 					*state = IDLE;
-					STATE_OUT = IDLE;
+					STATE_OUT = *state;
 					SetupADC(FSR_PORT, ENTRY_FSR);
 					pwmControl(DUCK1_SERVO, 1000);
 					pwmControl(DUCK2_SERVO, 1000);
 					GEARED_OUT &= ~GEARED_MOTOR;		// Turn off geared motor
+					LIFT_OUT |= LIFT_DIN2;
+					delayMillis(MOTOR_DELAY);
+					LIFT_OUT &= ~LIFT_DIN2;
 					break;
 				default: break;
 			}
@@ -355,6 +437,12 @@ void state_duck2(unsigned char *operation)
 
 void state_duck3(unsigned char *operation)
 {
+	delayMillis(DUCK_DELAY);
+	*operation = FINISHED_OPERATION;
+}
+
+void state_pre_strength(unsigned char *operation)
+{
 	delayMillis(DEFAULT_DELAY);
 	TakeADCMeas();
 	if(ADCResult < LINE_SENSOR_MAX)
@@ -362,25 +450,47 @@ void state_duck3(unsigned char *operation)
 	else
 		*operation = CONTINUE_OPERATION;
 }
-void state_strength(unsigned char *operation)
+
+void state_strength(unsigned char max_led, unsigned char *operation)
 {
 	delayMillis(DEFAULT_DELAY);
 	unsigned char ii = 0x01;
+	LIFT_OUT |= LIFT_DIN1;					// DIN1 = HIGH, DIN2 = LOW 
 	shiftOut(ii);
 	delayMillis(LED_RISE_DELAY);
-	while (ii < 0xFF)
+	while (ii < max_led)
 	{
 		ii = (ii << 1) + 0x01;
 		shiftOut(ii);
 		delayMillis(LED_RISE_DELAY);
 	}
-	while (ii > 0x00)
+	if (max_led == 0xFF)
 	{
-		ii = (ii >> 1);
-		shiftOut(ii);
-		delayMillis(LED_FALL_DELAY);
+		*operation = FINISHED_OPERATION;
 	}
-	TakeADCMeas();
+	else
+	{
+		LIFT_OUT &= ~LIFT_DIN1;				// DIN1 = LOW, DIN2 = LOW 
+		delayMillis(DEFAULT_DELAY);
+		LIFT_OUT |= LIFT_DIN2;				// DIN1 = LOW, DIN2 = HIGH 
+		while (ii > 0x00)
+		{
+			ii = (ii >> 1);
+			shiftOut(ii);
+			delayMillis(LED_FALL_DELAY);
+		}
+		TakeADCMeas();
+		while (ADCResult >= LINE_SENSOR_MAX)
+			delayMillis(DEFAULT_DELAY);
+		LIFT_OUT &= ~LIFT_DIN2;				// DIN1 = LOW, DIN2 = LOW 
+		*operation = FINISHED_OPERATION;
+	}
+}
+
+void state_post_strength(unsigned char *operation)
+{
+	delayMillis(DEFAULT_DELAY);
+	LIFT_OUT &= ~LIFT_DIN1;					// DIN1 = LOW, DIN2 = LOW 
 	if(ADCResult < FORCE_SENSOR_MAX)
 		*operation = FINISHED_OPERATION;
 	else

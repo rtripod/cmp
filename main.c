@@ -130,6 +130,7 @@ void SetupADC(unsigned char in_port, unsigned char in_bit)
 				case BIT5:
 					ADC10MCTL0 = ADC10INCH_5;
 					break;
+				default: break;
 			}
 			break;
 		case IR_PORT:
@@ -141,6 +142,7 @@ void SetupADC(unsigned char in_port, unsigned char in_bit)
 				case BIT4:
 					ADC10MCTL0 = ADC10INCH_13;
 					break;
+				default: break;
 			}
 			break;
 		default: break;
@@ -200,9 +202,10 @@ int main(void)
 	STATE_OUT = IDLE;
 	SetupADC(FSR_PORT, BIT1);
 	
-	pwmControl(DUCK1_SERVO, 1000);
-	pwmControl(DUCK2_SERVO, 1000);
-		
+	pwmControl(DUCK1_SERVO, DUCK_UP);
+	pwmControl(DUCK2_SERVO, DUCK_UP);
+	
+	pwmControl(STRENGTH_SERVO, MALLET_DOWN);	
 	shiftOut(0);
 	
 	unsigned char operation;
@@ -240,20 +243,21 @@ int main(void)
 				break;
 			case STRENGTH1:
 				delayMillis(DEFAULT_DELAY);
-				state_strength(0x0F, &operation);
+				state_strength(LED_ATTEMPT1, &operation);
 				break;
 			case STRENGTH2:
 				delayMillis(DEFAULT_DELAY);
-				state_strength(0x3F, &operation);
+				state_strength(LED_ATTEMPT2, &operation);
 				break;
 			case STRENGTH3:
 				delayMillis(DEFAULT_DELAY);
-				state_strength(0xFF, &operation);
+				state_strength(LED_ATTEMPT3, &operation);
 				break;
 			case POST_STRENGTH:
 				delayMillis(DEFAULT_DELAY);
 				state_post_strength(&operation);
 				break;
+			default: break;
 		}
 		delayMillis(DEFAULT_DELAY);
 		state_machine(&state, operation);
@@ -294,7 +298,7 @@ void state_machine(STATE *state, unsigned char operation)
 				case FINISHED_OPERATION:
 					*state = DUCK1;
 					STATE_OUT = *state;
-					pwmControl(DUCK1_SERVO, 1500);
+					delayMillis(DUCK_DELAY);
 					break;
 				default: break;
 			}
@@ -305,7 +309,7 @@ void state_machine(STATE *state, unsigned char operation)
 				case FINISHED_OPERATION:
 					*state = DUCK2;
 					STATE_OUT = *state;
-					pwmControl(DUCK2_SERVO, 1500);
+					delayMillis(DUCK_DELAY);
 					break;
 				default: break;
 			}
@@ -316,6 +320,7 @@ void state_machine(STATE *state, unsigned char operation)
 				case FINISHED_OPERATION:
 					*state = DUCK3;
 					STATE_OUT = *state;
+					delayMillis(DUCK_DELAY);
 					break;
 				default: break;
 			}
@@ -379,8 +384,8 @@ void state_machine(STATE *state, unsigned char operation)
 					*state = IDLE;
 					STATE_OUT = *state;
 					SetupADC(FSR_PORT, ENTRY_FSR);
-					pwmControl(DUCK1_SERVO, 1000);
-					pwmControl(DUCK2_SERVO, 1000);
+					pwmControl(DUCK1_SERVO, DUCK_UP);
+					pwmControl(DUCK2_SERVO, DUCK_UP);
 					GEARED_OUT &= ~GEARED_MOTOR;		// Turn off geared motor
 					LIFT_OUT |= LIFT_DIN2;
 					delayMillis(MOTOR_DELAY);
@@ -389,6 +394,7 @@ void state_machine(STATE *state, unsigned char operation)
 				default: break;
 			}
 			break;
+		default: break;
 	}
 }
 
@@ -425,25 +431,26 @@ void state_pre_ducks(unsigned char *operation)
 
 void state_duck1(unsigned char *operation)
 {
-	delayMillis(DUCK_DELAY);
+	pwmControl(DUCK1_SERVO, DUCK_DOWN);
 	*operation = FINISHED_OPERATION;
 }
 
 void state_duck2(unsigned char *operation)
 {
-	delayMillis(DUCK_DELAY);
+	pwmControl(DUCK2_SERVO, DUCK_DOWN);
 	*operation = FINISHED_OPERATION;
 }
 
 void state_duck3(unsigned char *operation)
 {
-	delayMillis(DUCK_DELAY);
+	pwmControl(DUCK3_SERVO, DUCK_DOWN);
 	*operation = FINISHED_OPERATION;
 }
 
 void state_pre_strength(unsigned char *operation)
 {
 	delayMillis(DEFAULT_DELAY);
+	pwmControl(STRENGTH_SERVO, MALLET1_UP);
 	TakeADCMeas();
 	if(ADCResult < LINE_SENSOR_MAX)
 		*operation = FINISHED_OPERATION;
@@ -454,6 +461,7 @@ void state_pre_strength(unsigned char *operation)
 void state_strength(unsigned char max_led, unsigned char *operation)
 {
 	delayMillis(DEFAULT_DELAY);
+	pwmControl(STRENGTH_SERVO, MALLET_DOWN);
 	unsigned char ii = 0x01;
 	LIFT_OUT |= LIFT_DIN1;					// DIN1 = HIGH, DIN2 = LOW 
 	shiftOut(ii);
@@ -464,7 +472,7 @@ void state_strength(unsigned char max_led, unsigned char *operation)
 		shiftOut(ii);
 		delayMillis(LED_RISE_DELAY);
 	}
-	if (max_led == 0xFF)
+	if (max_led == LED_ATTEMPT3)
 	{
 		*operation = FINISHED_OPERATION;
 	}
@@ -479,6 +487,14 @@ void state_strength(unsigned char max_led, unsigned char *operation)
 			shiftOut(ii);
 			delayMillis(LED_FALL_DELAY);
 		}
+		if (max_led == LED_ATTEMPT1)
+		{
+			pwmControl(STRENGTH_SERVO, MALLET2_UP);
+		}
+		else
+		{
+			pwmControl(STRENGTH_SERVO, MALLET3_UP);
+		}		
 		TakeADCMeas();
 		while (ADCResult >= LINE_SENSOR_MAX)
 			delayMillis(DEFAULT_DELAY);

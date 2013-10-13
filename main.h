@@ -22,6 +22,13 @@
 #define DUCK3_SERVO BIT4
 #define STRENGTH_SERVO BIT6
 
+#define DUCK_UP 1900
+#define DUCK_DOWN 1200
+#define MALLET1_UP 1700
+#define MALLET2_UP 1800
+#define MALLET3_UP 1900
+#define MALLET_DOWN 1200
+
 // Lift motor P2.1, P2.2
 #define LIFT_DIR P2DIR
 #define LIFT_OUT P2OUT
@@ -57,6 +64,10 @@
 #define SHIFT_SERIN BIT0
 #define SHIFT_SRCK BIT2
 #define SHIFT_RCK BIT5
+
+#define LED_ATTEMPT1 0x0F
+#define LED_ATTEMPT2 0x3F
+#define LED_ATTEMPT3 0xFF
 
 // State operation
 #define FINISHED_OPERATION 0

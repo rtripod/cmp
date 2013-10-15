@@ -178,7 +178,8 @@ int main(void)
 	WAVE_OUT &= ~WAVE_DIN;*/
 	
 	// Setup lift motor
-	LIFT_DIR |= (LIFT_DIR1+LIFT_DIR2);
+	LIFT_DIR |= (LIFT_DIR1+LIFT_EN+LIFT_DIR2);
+	LIFT_SEL0 |= LIFT_EN;
 	LIFT_OUT &= ~(LIFT_DIR1+LIFT_DIR2);
 	
 	// Setup shifter

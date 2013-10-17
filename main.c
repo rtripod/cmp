@@ -38,10 +38,10 @@ void pwmControl(unsigned char in_component, int duty_cycle)
 			TB1CTL = TBSSEL_2 + MC_1 + TBCLR;			// SMCLK, up mode, clear TBR
 			break;
 		case LIFT_EN:
-			TB1CCR0 = 500 - 1;							// PWM Period
-			TB1CCTL1 = OUTMOD_7;						// CCR1 reset/set
-			TB1CCR1 = duty_cycle;						// CCR1 PWM duty cycle
-			TB1CTL = TBSSEL_2 + MC_1 + TBCLR;			// SMCLK, up mode, clear TBR
+			TB2CCR0 = 500 - 1;							// PWM Period
+			TB2CCTL1 = OUTMOD_7;						// CCR1 reset/set
+			TB2CCR1 = duty_cycle;						// CCR1 PWM duty cycle
+			TB2CTL = TBSSEL_2 + MC_1 + TBCLR;			// SMCLK, up mode, clear TBR
 			break;
 		default: break;
 	}
@@ -79,14 +79,14 @@ void SetupADC(unsigned char in_port, unsigned char in_bit)
 			break;
 		default: break;
 	}
-
-	// Allow for settling delay 
+	
+	// Allow for settling delay
 	delayMillis(DEFAULT_DELAY);
-
+	
 	// Configure ADC
-	ADC10CTL0 &= ~ADC10ENC; 
+	ADC10CTL0 &= ~ADC10ENC;
 	ADC10CTL0 = ADC10SHT_7 + ADC10ON;		// ADC10ON, S&H=192 ADC clks
-	ADC10CTL1 = ADC10SHS_0 + ADC10SHP + ADC10SSEL_0; 
+	ADC10CTL1 = ADC10SHS_0 + ADC10SHP + ADC10SSEL_0;
 	ADC10CTL2 = ADC10RES;					// 10-bit conversion results
 	
 	switch (in_port)
@@ -140,9 +140,9 @@ void SetupADC(unsigned char in_port, unsigned char in_bit)
 }
 
 void TakeADCMeas(void)
-{  
-	while (ADC10CTL1 & BUSY); 
-	ADC10CTL0 |= ADC10ENC | ADC10SC ;		// Start conversion 
+{
+	while (ADC10CTL1 & BUSY);
+	ADC10CTL0 |= ADC10ENC | ADC10SC ;		// Start conversion
 	__bis_SR_register(CPUOFF + GIE);		// LPM0, ADC10_ISR will force exit
 	__no_operation();						// For debug only
 }
@@ -158,8 +158,8 @@ int main(void)
 	
 	// P1.4 is used as input from NTC voltage divider
 	// Set it to output low
-	P1OUT &= ~BIT4;      
-	P1DIR |= BIT4; 
+	P1OUT &= ~BIT4;
+	P1DIR |= BIT4;
 	
 	// Setup FPGA state signal
 	STATE_DIR |= (BIT4+BIT5+BIT6+BIT7);
@@ -291,7 +291,7 @@ void state_machine(STATE *state, unsigned char operation)
 					delayMillis(DUCK_DELAY);
 					*state = DUCK1;
 					STATE_OUT = *state;					// FPGA: Play duck SFX
-                                        break;
+					break;
 				default: break;
 			}
 			break;
@@ -365,7 +365,7 @@ void state_machine(STATE *state, unsigned char operation)
 					*state = POST_STRENGTH;
 					STATE_OUT = *state;					// FPGA: Play bell SFX
 					unsigned char ii;
-                                        for (ii = 0; ii < 3; ++ii)
+					for (ii = 0; ii < 3; ++ii)
 						shiftOut(ii);
 					SetupADC(SENSOR_PORT3, EXIT_FSR);
 					break;
@@ -458,7 +458,8 @@ void state_strength1(unsigned char *operation)
 	delayMillis(DEFAULT_DELAY);
 	pwmControl(STRENGTH_SERVO, MALLET_DOWN);
 	unsigned char ii = 0x01;
-	LIFT_OUT |= LIFT_DIR1;					// DIN1 = HIGH, DIN2 = LOW 
+	pwmControl(LIFT_EN, LIFT_UP);
+	LIFT_OUT |= LIFT_DIR1;					// DIN1 = HIGH, DIN2 = LOW
 	shiftOut(ii);
 	delayMillis(LED_RISE_DELAY);
 	while (ii < LED_ATTEMPT1)
@@ -467,9 +468,10 @@ void state_strength1(unsigned char *operation)
 		shiftOut(ii);
 		delayMillis(LED_RISE_DELAY);
 	}
-	LIFT_OUT &= ~LIFT_DIR1;				// DIN1 = LOW, DIN2 = LOW 
+	LIFT_OUT &= ~LIFT_DIR1;				// DIN1 = LOW, DIN2 = LOW
+	pwmControl(LIFT_EN, LIFT_DOWN);
 	delayMillis(DEFAULT_DELAY);
-	LIFT_OUT |= LIFT_DIR2;				// DIN1 = LOW, DIN2 = HIGH 
+	LIFT_OUT |= LIFT_DIR2;				// DIN1 = LOW, DIN2 = HIGH
 	while (ii > 0x00)
 	{
 		ii = (ii >> 1);
@@ -483,7 +485,7 @@ void state_strength1(unsigned char *operation)
 		TakeADCMeas();
 		delayMillis(DEFAULT_DELAY);
 	}
-	LIFT_OUT &= ~LIFT_DIR2;				// DIN1 = LOW, DIN2 = LOW 
+	LIFT_OUT &= ~LIFT_DIR2;				// DIN1 = LOW, DIN2 = LOW
 	*operation = FINISHED_OPERATION;
 }
 
@@ -492,7 +494,8 @@ void state_strength2(unsigned char *operation)
 	delayMillis(DEFAULT_DELAY);
 	pwmControl(STRENGTH_SERVO, MALLET_DOWN);
 	unsigned char ii = 0x01;
-	LIFT_OUT |= LIFT_DIR1;					// DIN1 = HIGH, DIN2 = LOW 
+	pwmControl(LIFT_EN, LIFT_UP);
+	LIFT_OUT |= LIFT_DIR1;					// DIN1 = HIGH, DIN2 = LOW
 	shiftOut(ii);
 	delayMillis(LED_RISE_DELAY);
 	while (ii < LED_ATTEMPT2)
@@ -501,9 +504,10 @@ void state_strength2(unsigned char *operation)
 		shiftOut(ii);
 		delayMillis(LED_RISE_DELAY);
 	}
-	LIFT_OUT &= ~LIFT_DIR1;				// DIN1 = LOW, DIN2 = LOW 
+	LIFT_OUT &= ~LIFT_DIR1;				// DIN1 = LOW, DIN2 = LOW
+	pwmControl(LIFT_EN, LIFT_DOWN);
 	delayMillis(DEFAULT_DELAY);
-	LIFT_OUT |= LIFT_DIR2;				// DIN1 = LOW, DIN2 = HIGH 
+	LIFT_OUT |= LIFT_DIR2;				// DIN1 = LOW, DIN2 = HIGH
 	while (ii > 0x00)
 	{
 		ii = (ii >> 1);
@@ -517,7 +521,7 @@ void state_strength2(unsigned char *operation)
 		TakeADCMeas();
 		delayMillis(DEFAULT_DELAY);
 	}
-	LIFT_OUT &= ~LIFT_DIR2;				// DIN1 = LOW, DIN2 = LOW 
+	LIFT_OUT &= ~LIFT_DIR2;				// DIN1 = LOW, DIN2 = LOW
 	*operation = FINISHED_OPERATION;
 }
 
@@ -526,7 +530,8 @@ void state_strength3(unsigned char *operation)
 	delayMillis(DEFAULT_DELAY);
 	pwmControl(STRENGTH_SERVO, MALLET_DOWN);
 	unsigned char ii = 0x01;
-	LIFT_OUT |= LIFT_DIR1;					// DIN1 = HIGH, DIN2 = LOW 
+	pwmControl(LIFT_EN, LIFT_UP);
+	LIFT_OUT |= LIFT_DIR1;					// DIN1 = HIGH, DIN2 = LOW
 	shiftOut(ii);
 	delayMillis(LED_RISE_DELAY);
 	while (ii < LED_ATTEMPT3)
@@ -543,7 +548,7 @@ void state_strength(unsigned char max_led, unsigned char *operation)
 	delayMillis(DEFAULT_DELAY);
 	pwmControl(STRENGTH_SERVO, MALLET_DOWN);
 	unsigned char ii = 0x01;
-	LIFT_OUT |= LIFT_DIR1;					// DIN1 = HIGH, DIN2 = LOW 
+	LIFT_OUT |= LIFT_DIR1;					// DIN1 = HIGH, DIN2 = LOW
 	shiftOut(ii);
 	delayMillis(LED_RISE_DELAY);
 	while (ii < max_led)
@@ -558,9 +563,9 @@ void state_strength(unsigned char max_led, unsigned char *operation)
 	}
 	else
 	{
-		LIFT_OUT &= ~LIFT_DIR1;				// DIN1 = LOW, DIN2 = LOW 
+		LIFT_OUT &= ~LIFT_DIR1;				// DIN1 = LOW, DIN2 = LOW
 		delayMillis(DEFAULT_DELAY);
-		LIFT_OUT |= LIFT_DIR2;				// DIN1 = LOW, DIN2 = HIGH 
+		LIFT_OUT |= LIFT_DIR2;				// DIN1 = LOW, DIN2 = HIGH
 		while (ii > 0x00)
 		{
 			ii = (ii >> 1);
@@ -581,7 +586,7 @@ void state_strength(unsigned char max_led, unsigned char *operation)
 			TakeADCMeas();
 			delayMillis(DEFAULT_DELAY);
 		}
-		LIFT_OUT &= ~LIFT_DIR2;				// DIN1 = LOW, DIN2 = LOW 
+		LIFT_OUT &= ~LIFT_DIR2;				// DIN1 = LOW, DIN2 = LOW
 		*operation = FINISHED_OPERATION;
 	}
 }
@@ -590,6 +595,7 @@ void state_post_strength(unsigned char *operation)
 {
 	delayMillis(DEFAULT_DELAY);
 	LIFT_OUT &= ~LIFT_DIR1;					// DIN1 = LOW, DIN2 = LOW
+	pwmControl(LIFT_EN, LIFT_DOWN);
 	TakeADCMeas();
 	if(ADCResult < FORCE_SENSOR_MAX)
 		*operation = FINISHED_OPERATION;
@@ -608,7 +614,7 @@ __interrupt void ADC10_ISR(void)
 		case ADC10IV_ADC10HIIFG: break;			// ADC10HI
 		case ADC10IV_ADC10LOIFG: break;			// ADC10LO
 		case ADC10IV_ADC10INIFG: break;			// ADC10IN
-		case ADC10IV_ADC10IFG: 
+		case ADC10IV_ADC10IFG:
 			ADCResult = ADC10MEM0;
 			__bic_SR_register_on_exit(CPUOFF);
 			break;								// Clear CPUOFF bit from 0(SR)

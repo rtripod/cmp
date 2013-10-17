@@ -38,6 +38,9 @@
 #define LIFT_EN BIT1
 #define LIFT_DIR2 BIT2
 
+#define LIFT_UP 499
+#define LIFT_DOWN 249
+
 /* Wave motor P1.7
 #define WAVE_DIR P1DIR
 #define WAVE_OUT P1OUT
@@ -56,7 +59,7 @@
 #define DUCK_IR BIT1
 #define STRENGTH_IR BIT3
 
-// Strength LEDs P1.5, P1.7, P2.6 
+// Strength LEDs P1.5, P1.7, P2.6
 #define SHIFTER1_DIR P1DIR
 #define SHIFTER1_OUT P1OUT
 #define SHIFTER2_DIR P2DIR

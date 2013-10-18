@@ -192,10 +192,11 @@ int main(void)
 	// Initial state
 	STATE state = IDLE;
 	STATE_OUT = IDLE;
-	SetupADC(SENSOR_PORT3, BIT1);
+	SetupADC(SENSOR_PORT3, ENTRY_FSR);
 	
 	pwmControl(DUCK1_SERVO, DUCK_UP);
 	pwmControl(DUCK2_SERVO, DUCK_UP);
+	pwmControl(DUCK3_SERVO, DUCK_UP);
 	
 	pwmControl(STRENGTH_SERVO, MALLET_DOWN);
 	shiftOut(0);
@@ -366,7 +367,13 @@ void state_machine(STATE *state, unsigned char operation)
 					STATE_OUT = *state;					// FPGA: Play bell SFX
 					unsigned char ii;
 					for (ii = 0; ii < 3; ++ii)
-						shiftOut(ii);
+					{
+						shiftOut(0x00);
+						delayMillis(LED_FALL_DELAY);
+						shiftOut(0xFF);
+						delayMillis(LED_FALL_DELAY);
+					}
+					shiftOut(0x00);
 					SetupADC(SENSOR_PORT3, EXIT_FSR);
 					break;
 				default: break;
@@ -381,6 +388,7 @@ void state_machine(STATE *state, unsigned char operation)
 					SetupADC(SENSOR_PORT3, ENTRY_FSR);
 					pwmControl(DUCK1_SERVO, DUCK_UP);
 					pwmControl(DUCK2_SERVO, DUCK_UP);
+					pwmControl(DUCK3_SERVO, DUCK_UP);
 					GEARED_OUT &= ~GEARED_MOTOR;		// Turn off geared motor
 					LIFT_OUT |= LIFT_DIR2;
 					delayMillis(MOTOR_DELAY);
@@ -398,7 +406,7 @@ void state_idle(unsigned char *operation)
 	
 	delayMillis(DEFAULT_DELAY);
 	TakeADCMeas();
-	if(ADCResult < FORCE_SENSOR_MAX)
+	if(ADCResult < FSR_MAX)
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;
@@ -408,7 +416,7 @@ void state_ferris(unsigned char *operation)
 {
 	delayMillis(DEFAULT_DELAY);
 	TakeADCMeas();
-	if(ADCResult < FORCE_SENSOR_MAX)
+	if(ADCResult < FSR_MAX)
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;
@@ -418,7 +426,7 @@ void state_pre_ducks(unsigned char *operation)
 {
 	delayMillis(DEFAULT_DELAY);
 	TakeADCMeas();
-	if(ADCResult < LINE_SENSOR_MAX)
+	if(ADCResult < IR_MAX)
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;
@@ -447,7 +455,7 @@ void state_pre_strength(unsigned char *operation)
 	delayMillis(DEFAULT_DELAY);
 	pwmControl(STRENGTH_SERVO, MALLET1_UP);
 	TakeADCMeas();
-	if(ADCResult < LINE_SENSOR_MAX)
+	if(ADCResult < IR_MAX)
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;
@@ -480,7 +488,7 @@ void state_strength1(unsigned char *operation)
 	}
 	pwmControl(STRENGTH_SERVO, MALLET2_UP);
 	TakeADCMeas();
-	while (ADCResult >= LINE_SENSOR_MAX)
+	while (ADCResult >= IR_MAX)
 	{
 		TakeADCMeas();
 		delayMillis(DEFAULT_DELAY);
@@ -516,7 +524,7 @@ void state_strength2(unsigned char *operation)
 	}
 	pwmControl(STRENGTH_SERVO, MALLET3_UP);
 	TakeADCMeas();
-	while (ADCResult >= LINE_SENSOR_MAX)
+	while (ADCResult >= IR_MAX)
 	{
 		TakeADCMeas();
 		delayMillis(DEFAULT_DELAY);
@@ -581,7 +589,7 @@ void state_strength(unsigned char max_led, unsigned char *operation)
 			pwmControl(STRENGTH_SERVO, MALLET3_UP);
 		}		
 		TakeADCMeas();
-		while (ADCResult >= LINE_SENSOR_MAX)
+		while (ADCResult >= IR_MAX)
 		{
 			TakeADCMeas();
 			delayMillis(DEFAULT_DELAY);
@@ -597,7 +605,7 @@ void state_post_strength(unsigned char *operation)
 	LIFT_OUT &= ~LIFT_DIR1;					// DIN1 = LOW, DIN2 = LOW
 	pwmControl(LIFT_EN, LIFT_DOWN);
 	TakeADCMeas();
-	if(ADCResult < FORCE_SENSOR_MAX)
+	if(ADCResult < FSR_MAX)
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;

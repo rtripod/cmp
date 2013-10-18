@@ -1,8 +1,8 @@
 #include "msp430fr5739.h"
 #include <stdio.h>
 
-#define LINE_SENSOR_MAX 300
-#define FORCE_SENSOR_MAX 900
+#define IR_MAX 300
+#define FSR_MAX 450
 
 // States P3.4 to P3.7
 #define STATE_DIR P3DIR
@@ -24,10 +24,10 @@
 
 #define DUCK_UP 1900
 #define DUCK_DOWN 1200
-#define MALLET1_UP 1700
+#define MALLET1_UP 1400
 #define MALLET2_UP 1800
-#define MALLET3_UP 1900
-#define MALLET_DOWN 1200
+#define MALLET3_UP 2200
+#define MALLET_DOWN 800
 
 // Lift motor P2.0, P2.1, P2.2
 #define LIFT_DIR P2DIR
@@ -69,8 +69,8 @@
 #define SHIFT1_SRCK BIT7
 #define SHIFT2_SERIN BIT6
 
-#define LED_ATTEMPT1 0x0F
-#define LED_ATTEMPT2 0x3F
+#define LED_ATTEMPT1 0x07
+#define LED_ATTEMPT2 0x1F
 #define LED_ATTEMPT3 0xFF
 
 // State operation

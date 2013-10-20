@@ -14,31 +14,31 @@ void pwmControl(unsigned char in_component, int duty_cycle)
 	switch (in_component)
 	{
 		case DUCK1_SERVO:
-			TA0CCR0 = 20000 - 1;						// PWM Period
+			TA0CCR0 = SERVO_PERIOD;						// PWM Period
 			TA0CCTL1 = OUTMOD_7;						// CCR1 reset/set
 			TA0CCR1 = duty_cycle;						// CCR1 PWM duty cycle
 			TA0CTL = TASSEL_2 + MC_1 + TACLR;			// SMCLK, up mode, clear TAR
 			break;
 		case DUCK2_SERVO:
-			TA1CCR0 = 20000 - 1;						// PWM Period
+			TA1CCR0 = SERVO_PERIOD;						// PWM Period
 			TA1CCTL1 = OUTMOD_7;						// CCR1 reset/set
 			TA1CCR1 = duty_cycle;						// CCR1 PWM duty cycle
 			TA1CTL = TASSEL_2 + MC_1 + TACLR;			// SMCLK, up mode, clear TAR
 			break;
 		case DUCK3_SERVO:
-			TB0CCR0 = 20000 - 1;						// PWM Period
+			TB0CCR0 = SERVO_PERIOD;						// PWM Period
 			TB0CCTL1 = OUTMOD_7;						// CCR1 reset/set
 			TB0CCR1 = duty_cycle;						// CCR1 PWM duty cycle
 			TB0CTL = TBSSEL_2 + MC_1 + TBCLR;			// SMCLK, up mode, clear TBR
 			break;
 		case STRENGTH_SERVO:
-			TB1CCR0 = 20000 - 1;						// PWM Period
+			TB1CCR0 = SERVO_PERIOD;						// PWM Period
 			TB1CCTL1 = OUTMOD_7;						// CCR1 reset/set
 			TB1CCR1 = duty_cycle;						// CCR1 PWM duty cycle
 			TB1CTL = TBSSEL_2 + MC_1 + TBCLR;			// SMCLK, up mode, clear TBR
 			break;
 		case LIFT_EN:
-			TB2CCR0 = 500 - 1;							// PWM Period
+			TB2CCR0 = LIFT_PERIOD;							// PWM Period
 			TB2CCTL1 = OUTMOD_7;						// CCR1 reset/set
 			TB2CCR1 = duty_cycle;						// CCR1 PWM duty cycle
 			TB2CTL = TBSSEL_2 + MC_1 + TBCLR;			// SMCLK, up mode, clear TBR
@@ -162,8 +162,8 @@ int main(void)
 	P1DIR |= BIT4;
 	
 	// Setup FPGA state signal
-	STATE_DIR |= (BIT4+BIT5+BIT6+BIT7);
-	STATE_OUT &= ~(BIT4+BIT5+BIT6+BIT7);
+	STATE_DIR |= (STATE_0+STATE_1+STATE_2+STATE_3);
+	STATE_OUT &= ~(STATE_0+STATE_1+STATE_2+STATE_3);
 	
 	// Setup geared motor
 	GEARED_DIR |= GEARED_MOTOR;
@@ -172,11 +172,7 @@ int main(void)
 	// Setup servos
 	SERVO_DIR |= (DUCK1_SERVO+DUCK2_SERVO+DUCK3_SERVO+STRENGTH_SERVO);
 	SERVO_SEL0 |= (DUCK1_SERVO+DUCK2_SERVO+DUCK3_SERVO+STRENGTH_SERVO);
-	
-	/* Setup wave motor
-	WAVE_DIR |= WAVE_DIN;
-	WAVE_OUT &= ~WAVE_DIN;*/
-	
+		
 	// Setup lift motor
 	LIFT_DIR |= (LIFT_DIR1+LIFT_EN+LIFT_DIR2);
 	LIFT_SEL0 |= LIFT_EN;
@@ -184,11 +180,11 @@ int main(void)
 	
 	// Setup shifter
 	SHIFTER1_DIR |= (SHIFT1_RCK+SHIFT1_SRCK);
-	SHIFTER2_DIR |= SHIFT2_SERIN;
-	
 	SHIFTER1_OUT &= ~(SHIFT1_RCK+SHIFT1_SRCK);
+		
+	SHIFTER2_DIR |= SHIFT2_SERIN;
 	SHIFTER2_OUT &= ~SHIFT2_SERIN;
-	
+		
 	// Initial state
 	STATE state = IDLE;
 	STATE_OUT = IDLE;
@@ -279,7 +275,6 @@ void state_machine(STATE *state, unsigned char operation)
 				case FINISHED_OPERATION:
 					*state = PRE_DUCKS;
 					STATE_OUT = *state;					// FPGA: Dim Ferris LEDs, brighten duck LEDs
-					//WAVE_OUT |= WAVE_DIN;
 					SetupADC(SENSOR_PORT1, DUCK_IR);
 					break;
 				default: break;
@@ -385,14 +380,21 @@ void state_machine(STATE *state, unsigned char operation)
 				case FINISHED_OPERATION:
 					*state = IDLE;
 					STATE_OUT = *state;					// FPGA: Turn off music and LEDs
-					SetupADC(SENSOR_PORT3, ENTRY_FSR);
 					pwmControl(DUCK1_SERVO, DUCK_UP);
 					pwmControl(DUCK2_SERVO, DUCK_UP);
 					pwmControl(DUCK3_SERVO, DUCK_UP);
 					GEARED_OUT &= ~GEARED_MOTOR;		// Turn off geared motor
-					LIFT_OUT |= LIFT_DIR2;
-					delayMillis(MOTOR_DELAY);
-					LIFT_OUT &= ~LIFT_DIR2;
+					LIFT_OUT |= LIFT_DIR2;				// DIN1 = LOW, DIN2 = HIGH
+					SetupADC(SENSOR_PORT1, STRENGTH_IR);
+					TakeADCMeas();
+					while (ADCResult >= IR_TRIGGER)
+					{
+						TakeADCMeas();
+						delayMillis(DEFAULT_DELAY);
+					}
+					delayMillis(LIFT_DELAY);
+					LIFT_OUT &= ~LIFT_DIR2;				// DIN1 = LOW, DIN2 = LOW
+					SetupADC(SENSOR_PORT3, ENTRY_FSR);
 					break;
 				default: break;
 			}
@@ -406,7 +408,7 @@ void state_idle(unsigned char *operation)
 	
 	delayMillis(DEFAULT_DELAY);
 	TakeADCMeas();
-	if(ADCResult < FSR_MAX)
+	if(ADCResult < FSR_TRIGGER)
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;
@@ -416,7 +418,7 @@ void state_ferris(unsigned char *operation)
 {
 	delayMillis(DEFAULT_DELAY);
 	TakeADCMeas();
-	if(ADCResult < FSR_MAX)
+	if(ADCResult < FSR_TRIGGER)
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;
@@ -426,7 +428,7 @@ void state_pre_ducks(unsigned char *operation)
 {
 	delayMillis(DEFAULT_DELAY);
 	TakeADCMeas();
-	if(ADCResult < IR_MAX)
+	if(ADCResult < IR_TRIGGER)
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;
@@ -455,7 +457,7 @@ void state_pre_strength(unsigned char *operation)
 	delayMillis(DEFAULT_DELAY);
 	pwmControl(STRENGTH_SERVO, MALLET1_UP);
 	TakeADCMeas();
-	if(ADCResult < IR_MAX)
+	if(ADCResult < IR_TRIGGER)
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;
@@ -488,11 +490,12 @@ void state_strength1(unsigned char *operation)
 	}
 	pwmControl(STRENGTH_SERVO, MALLET2_UP);
 	TakeADCMeas();
-	while (ADCResult >= IR_MAX)
+	while (ADCResult >= IR_TRIGGER)
 	{
 		TakeADCMeas();
 		delayMillis(DEFAULT_DELAY);
 	}
+	delayMillis(LIFT_DELAY);
 	LIFT_OUT &= ~LIFT_DIR2;				// DIN1 = LOW, DIN2 = LOW
 	*operation = FINISHED_OPERATION;
 }
@@ -524,11 +527,12 @@ void state_strength2(unsigned char *operation)
 	}
 	pwmControl(STRENGTH_SERVO, MALLET3_UP);
 	TakeADCMeas();
-	while (ADCResult >= IR_MAX)
+	while (ADCResult >= IR_TRIGGER)
 	{
 		TakeADCMeas();
 		delayMillis(DEFAULT_DELAY);
 	}
+	delayMillis(LIFT_DELAY);
 	LIFT_OUT &= ~LIFT_DIR2;				// DIN1 = LOW, DIN2 = LOW
 	*operation = FINISHED_OPERATION;
 }
@@ -556,6 +560,7 @@ void state_strength(unsigned char max_led, unsigned char *operation)
 	delayMillis(DEFAULT_DELAY);
 	pwmControl(STRENGTH_SERVO, MALLET_DOWN);
 	unsigned char ii = 0x01;
+	pwmControl(LIFT_EN, LIFT_UP);
 	LIFT_OUT |= LIFT_DIR1;					// DIN1 = HIGH, DIN2 = LOW
 	shiftOut(ii);
 	delayMillis(LED_RISE_DELAY);
@@ -572,6 +577,7 @@ void state_strength(unsigned char max_led, unsigned char *operation)
 	else
 	{
 		LIFT_OUT &= ~LIFT_DIR1;				// DIN1 = LOW, DIN2 = LOW
+		pwmControl(LIFT_EN, LIFT_DOWN);
 		delayMillis(DEFAULT_DELAY);
 		LIFT_OUT |= LIFT_DIR2;				// DIN1 = LOW, DIN2 = HIGH
 		while (ii > 0x00)
@@ -589,11 +595,12 @@ void state_strength(unsigned char max_led, unsigned char *operation)
 			pwmControl(STRENGTH_SERVO, MALLET3_UP);
 		}		
 		TakeADCMeas();
-		while (ADCResult >= IR_MAX)
+		while (ADCResult >= IR_TRIGGER)
 		{
 			TakeADCMeas();
 			delayMillis(DEFAULT_DELAY);
 		}
+		delayMillis(LIFT_DELAY);
 		LIFT_OUT &= ~LIFT_DIR2;				// DIN1 = LOW, DIN2 = LOW
 		*operation = FINISHED_OPERATION;
 	}
@@ -605,7 +612,7 @@ void state_post_strength(unsigned char *operation)
 	LIFT_OUT &= ~LIFT_DIR1;					// DIN1 = LOW, DIN2 = LOW
 	pwmControl(LIFT_EN, LIFT_DOWN);
 	TakeADCMeas();
-	if(ADCResult < FSR_MAX)
+	if(ADCResult < FSR_TRIGGER)
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;

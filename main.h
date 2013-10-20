@@ -1,19 +1,25 @@
 #include "msp430fr5739.h"
 #include <stdio.h>
 
-#define IR_MAX 300
-#define FSR_MAX 450
+/***********************************
+ * Delays (milliseconds)
+ ***********************************/
+#define DEFAULT_DELAY 50
+#define DUCK_DELAY 100
+#define LED_RISE_DELAY 60
+#define LED_FALL_DELAY 180
+#define LIFT_DELAY 100
 
-// States P3.4 to P3.7
-#define STATE_DIR P3DIR
-#define STATE_OUT P3OUT
-
-// Geared motor P4.0
+/***********************************
+ *	Geared motor: P4.0
+ ***********************************/
 #define GEARED_DIR P4DIR
 #define GEARED_OUT P4OUT
 #define GEARED_MOTOR BIT0
 
-// Servos P1.0, P1.2, P1.4, P1.6
+/***********************************
+ *	Servos: P1.0, P1.2, P1.4, P1.6
+ ***********************************/
 #define SERVO_DIR P1DIR
 #define SERVO_SEL0 P1SEL0
 
@@ -22,6 +28,8 @@
 #define DUCK3_SERVO BIT4
 #define STRENGTH_SERVO BIT6
 
+// PWM values
+#define SERVO_PERIOD 19999	// 20000 - 1
 #define DUCK_UP 1900
 #define DUCK_DOWN 1200
 #define MALLET1_UP 1400
@@ -29,7 +37,9 @@
 #define MALLET3_UP 2200
 #define MALLET_DOWN 800
 
-// Lift motor P2.0, P2.1, P2.2
+/***********************************
+ *	Lift motor: P2.0, P2.1, P2.2
+ ***********************************/
 #define LIFT_DIR P2DIR
 #define LIFT_SEL0 P2SEL0
 #define LIFT_OUT P2OUT
@@ -38,28 +48,32 @@
 #define LIFT_EN BIT1
 #define LIFT_DIR2 BIT2
 
-#define LIFT_UP 499
-#define LIFT_DOWN 249
+// PWM values
+#define LIFT_PERIOD 499		// 500 - 1
+#define LIFT_UP 499			// Full speed
+#define LIFT_DOWN (int)((float)LIFT_UP*(float)LED_RISE_DELAY/(float)LED_FALL_DELAY) // Descend same speed fraction as LEDs
 
-/* Wave motor P1.7
-#define WAVE_DIR P1DIR
-#define WAVE_OUT P1OUT
-#define WAVE_DIN BIT7*/
-
-// Sensors
+/***********************************
+ *	Sensors
+ ***********************************/
 #define SENSOR_PORT1 1
 #define SENSOR_PORT3 3
 
-// Force sensitive resistor P3.0, P3.1, P3.2
+// Force sensitive resistor: P3.0, P3.1, P3.2
 #define ENTRY_FSR BIT0
 #define PRE_DUCKS_FSR BIT1
 #define EXIT_FSR BIT2
 
-// Line sensor P1.1, P1.3
+// Line sensor: P1.1, P1.3
 #define DUCK_IR BIT1
 #define STRENGTH_IR BIT3
 
-// Strength LEDs P1.5, P1.7, P2.6
+#define IR_TRIGGER 300		// Port1 = 300, Port3 = 150
+#define FSR_TRIGGER 450		// Port1 = 900, Port3 = 450
+
+/***********************************
+ *	8bit Shifter: P1.5, P1.7, P2.6
+ ***********************************/
 #define SHIFTER1_DIR P1DIR
 #define SHIFTER1_OUT P1OUT
 #define SHIFTER2_DIR P2DIR
@@ -69,20 +83,25 @@
 #define SHIFT1_SRCK BIT7
 #define SHIFT2_SERIN BIT6
 
+// LEDs to light up
 #define LED_ATTEMPT1 0x07
 #define LED_ATTEMPT2 0x1F
 #define LED_ATTEMPT3 0xFF
 
+/***********************************
+ *	States: P3.4 to P3.7
+ ***********************************/
+#define STATE_DIR P3DIR
+#define STATE_OUT P3OUT
+
+#define STATE_0 BIT4
+#define STATE_1 BIT5
+#define STATE_2 BIT6
+#define STATE_3 BIT7
+
 // State operation
 #define FINISHED_OPERATION 0
 #define CONTINUE_OPERATION 1
-
-// Delays
-#define DEFAULT_DELAY 50
-#define DUCK_DELAY 100
-#define LED_RISE_DELAY 60
-#define LED_FALL_DELAY 180
-#define MOTOR_DELAY 3000
 
 typedef enum
 {

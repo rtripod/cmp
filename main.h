@@ -6,9 +6,9 @@
  ***********************************/
 #define DEFAULT_DELAY 50
 #define DUCK_DELAY 100
-#define LED_RISE_DELAY 60
-#define LED_FALL_DELAY 180
-#define LIFT_DELAY 100
+#define LED_RISE_DELAY 200
+#define LED_FALL_DELAY (int)((float)LED_RISE_DELAY*1.2 + 0.5)
+#define LIFT_DELAY 2
 
 /***********************************
  *	Geared motor: P4.0
@@ -38,20 +38,24 @@
 #define MALLET_DOWN 800
 
 /***********************************
- *	Lift motor: P2.0, P2.1, P2.2
+ *	H-Bridge Motors: P2.1
  ***********************************/
-#define LIFT_DIR P2DIR
-#define LIFT_SEL0 P2SEL0
-#define LIFT_OUT P2OUT
+#define HBRIDGE_DIR P2DIR
+#define HBRIDGE_SEL0 P2SEL0
+#define HBRIDGE_OUT P2OUT
+#define HBRIDGE_EN BIT1
 
+// Lift motor: P2.0, P2.2
 #define LIFT_DIR1 BIT0
-#define LIFT_EN BIT1
 #define LIFT_DIR2 BIT2
 
+// Wave motor: P2.5
+#define WAVE_DIR BIT5
+
 // PWM values
-#define LIFT_PERIOD 499		// 500 - 1
-#define LIFT_UP 499			// Full speed
-#define LIFT_DOWN (int)((float)LIFT_UP*(float)LED_RISE_DELAY/(float)LED_FALL_DELAY) // Descend same speed fraction as LEDs
+#define HBRIDGE_PERIOD 499		// 500 - 1
+#define LIFT_UP 499				// Full speed
+#define LIFT_DOWN (int)((float)LIFT_UP*0.3*(float)LED_RISE_DELAY/(float)LED_FALL_DELAY + 0.5) // Descend same speed fraction as LEDs
 
 /***********************************
  *	Sensors

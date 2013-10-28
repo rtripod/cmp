@@ -30,8 +30,15 @@
 
 // PWM values
 #define SERVO_PERIOD 19999	// 20000 - 1
-#define DUCK_UP 1900
-#define DUCK_DOWN 1200
+
+#define DUCK1_UP 700
+#define DUCK2_UP 700
+#define DUCK3_UP 600
+
+#define DUCK1_DOWN 1500
+#define DUCK2_DOWN 1400
+#define DUCK3_DOWN 1300
+
 #define MALLET1_UP 1400
 #define MALLET2_UP 1800
 #define MALLET3_UP 2200
@@ -63,29 +70,30 @@
 #define SENSOR_PORT1 1
 #define SENSOR_PORT3 3
 
-// Force sensitive resistor: P3.0, P3.1, P3.2
-#define ENTRY_FSR BIT0
-#define PRE_DUCKS_FSR BIT1
-#define EXIT_FSR BIT2
+// Force sensitive resistor: P1.1, P1.3, P1.5
+#define ENTRY_FSR BIT1
+#define PRE_DUCKS_FSR BIT3
+#define EXIT_FSR BIT5
 
-// Line sensor: P1.1, P1.3
-#define DUCK_IR BIT1
-#define STRENGTH_IR BIT3
+// Line sensor: P3.0, P3.1
+#define DUCK_IR BIT0
+#define STRENGTH_IR BIT1
 
-#define IR_TRIGGER 300		// Port1 = 300, Port3 = 150
-#define FSR_TRIGGER 450		// Port1 = 900, Port3 = 450
+#define IR_DUCK_TRIGGER 385
+#define IR_LIFT_TRIGGER 435
+#define FSR_TRIGGER 900	// Port1 = 900, Port3 = 450
 
 /***********************************
- *	8bit Shifter: P1.5, P1.7, P2.6
+ *	8bit Shifter: P2.6, P3.2, P3.3, 
  ***********************************/
-#define SHIFTER1_DIR P1DIR
-#define SHIFTER1_OUT P1OUT
 #define SHIFTER2_DIR P2DIR
 #define SHIFTER2_OUT P2OUT
+#define SHIFTER3_DIR P3DIR
+#define SHIFTER3_OUT P3OUT
 
-#define SHIFT1_RCK BIT5
-#define SHIFT1_SRCK BIT7
 #define SHIFT2_SERIN BIT6
+#define SHIFT3_SRCK BIT2
+#define SHIFT3_RCK BIT3
 
 // LEDs to light up
 #define LED_ATTEMPT1 0x07

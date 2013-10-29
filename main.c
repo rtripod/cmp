@@ -252,9 +252,9 @@ void state_machine(STATE *state, unsigned char operation)
 			{
 				case FINISHED_OPERATION:
 					*state = FERRIS;
-					STATE_OUT = *state;					// FPGA: Turn on music and LEDs
+					STATE_OUT = *state;							// FPGA: Turn on music and LEDs
 					SetupADC(SENSOR_PORT1, PRE_DUCKS_FSR);
-					GEARED_OUT |= GEARED_MOTOR;			// Turn on geared motor
+					GEARED_OUT |= GEARED_MOTOR;					// Turn on geared motor
 					break;
 				default: break;
 			}
@@ -264,9 +264,9 @@ void state_machine(STATE *state, unsigned char operation)
 			{
 				case FINISHED_OPERATION:
 					*state = PRE_DUCKS;
-					STATE_OUT = *state;					// FPGA: Dim Ferris LEDs, brighten duck LEDs
+					STATE_OUT = *state;							// FPGA: Dim Ferris LEDs, brighten duck LEDs
 					pwmControl(HBRIDGE_EN, LIFT_DOWN);
-					HBRIDGE_OUT |= WAVE_DIR;			// DIR = HIGH
+					HBRIDGE_OUT |= WAVE_DIR;					// DIR = HIGH
 					SetupADC(SENSOR_PORT3, DUCK_IR);
 					break;
 				default: break;
@@ -278,7 +278,7 @@ void state_machine(STATE *state, unsigned char operation)
 				case FINISHED_OPERATION:
 					delayMillis(DUCK_DELAY);
 					*state = DUCK1;
-					STATE_OUT = *state;					// FPGA: Play duck SFX
+					STATE_OUT = *state;							// FPGA: Play duck SFX
 					break;
 				default: break;
 			}
@@ -289,7 +289,7 @@ void state_machine(STATE *state, unsigned char operation)
 				case FINISHED_OPERATION:
 					delayMillis(DUCK_DELAY);
 					*state = DUCK2;
-					STATE_OUT = *state;					// FPGA: Play duck SFX
+					STATE_OUT = *state;							// FPGA: Play duck SFX
 					break;
 				default: break;
 			}
@@ -300,7 +300,7 @@ void state_machine(STATE *state, unsigned char operation)
 				case FINISHED_OPERATION:
 					delayMillis(DUCK_DELAY);
 					*state = DUCK3;
-					STATE_OUT = *state;					// FPGA: Play duck SFX
+					STATE_OUT = *state;							// FPGA: Play duck SFX
 					break;
 				default: break;
 			}
@@ -310,8 +310,8 @@ void state_machine(STATE *state, unsigned char operation)
 			{
 				case FINISHED_OPERATION:
 					*state = PRE_STRENGTH;
-					STATE_OUT = *state;					// FPGA: Dim duck LEDs
-					HBRIDGE_OUT &= ~WAVE_DIR;			// DIR = LOW
+					STATE_OUT = *state;							// FPGA: Dim duck LEDs
+					HBRIDGE_OUT &= ~WAVE_DIR;					// DIR = LOW
 					SetupADC(SENSOR_PORT3, STRENGTH_IR);
 					break;
 				default: break;
@@ -321,6 +321,7 @@ void state_machine(STATE *state, unsigned char operation)
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
+					pwmControl(STRENGTH_SERVO, MALLET_DOWN);	// FPGA: Play mallet SFX
 					*state = STRENGTH1;
 					STATE_OUT = *state;
 					break;
@@ -331,6 +332,7 @@ void state_machine(STATE *state, unsigned char operation)
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
+					pwmControl(STRENGTH_SERVO, MALLET_DOWN);	// FPGA: Play mallet SFX
 					*state = STRENGTH2;
 					STATE_OUT = *state;
 					break;
@@ -341,6 +343,7 @@ void state_machine(STATE *state, unsigned char operation)
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
+					pwmControl(STRENGTH_SERVO, MALLET_DOWN);	// FPGA: Play mallet SFX
 					*state = STRENGTH3;
 					STATE_OUT = *state;
 					break;
@@ -352,7 +355,9 @@ void state_machine(STATE *state, unsigned char operation)
 			{
 				case FINISHED_OPERATION:
 					*state = POST_STRENGTH;
-					STATE_OUT = *state;					// FPGA: Play bell SFX
+					STATE_OUT = *state;							// FPGA: Play bell SFX
+					HBRIDGE_OUT &= ~LIFT_DIR1;					// DIR1 = LOW, DIR2 = LOW
+					pwmControl(HBRIDGE_EN, LIFT_DOWN);
 					SetupADC(SENSOR_PORT1, EXIT_FSR);
 					break;
 				default: break;
@@ -363,7 +368,7 @@ void state_machine(STATE *state, unsigned char operation)
 			{
 				case FINISHED_OPERATION:
 					*state = IDLE;
-					STATE_OUT = *state;					// FPGA: Turn off music and LEDs
+					STATE_OUT = *state;							// FPGA: Turn off music and LEDs
 					unsigned char ii;
 					for (ii = 0; ii < 3; ++ii)
 					{
@@ -376,8 +381,8 @@ void state_machine(STATE *state, unsigned char operation)
 					pwmControl(DUCK1_SERVO, DUCK1_UP);
 					pwmControl(DUCK2_SERVO, DUCK2_UP);
 					pwmControl(DUCK3_SERVO, DUCK3_UP);
-					GEARED_OUT &= ~GEARED_MOTOR;		// Turn off geared motor
-					HBRIDGE_OUT |= LIFT_DIR2;			// DIR1 = LOW, DIR2 = HIGH
+					GEARED_OUT &= ~GEARED_MOTOR;				// Turn off geared motor
+					HBRIDGE_OUT |= LIFT_DIR2;					// DIR1 = LOW, DIR2 = HIGH
 					SetupADC(SENSOR_PORT3, STRENGTH_IR);
 					TakeADCMeas();
 					while (ADCResult >= IR_LIFT_TRIGGER)
@@ -385,7 +390,7 @@ void state_machine(STATE *state, unsigned char operation)
 						TakeADCMeas();
 					}
 					delayMillis(LIFT_DELAY);
-					HBRIDGE_OUT &= ~LIFT_DIR2;			// DIR1 = LOW, DIR2 = LOW
+					HBRIDGE_OUT &= ~LIFT_DIR2;					// DIR1 = LOW, DIR2 = LOW
 					SetupADC(SENSOR_PORT1, ENTRY_FSR);
 					break;
 				default: break;
@@ -452,10 +457,10 @@ void state_pre_strength(unsigned char *operation)
 
 void state_strength1(unsigned char *operation)
 {
-	pwmControl(STRENGTH_SERVO, MALLET_DOWN);
 	unsigned char ii = 0x01;
 	pwmControl(HBRIDGE_EN, LIFT_UP);
 	HBRIDGE_OUT |= LIFT_DIR1;					// DIR1 = HIGH, DIR2 = LOW
+	delayMillis(LED_RISE_DELAY);
 	shiftOut(ii);
 	delayMillis(LED_RISE_DELAY);
 	while (ii < LED_ATTEMPT1)
@@ -487,10 +492,10 @@ void state_strength1(unsigned char *operation)
 
 void state_strength2(unsigned char *operation)
 {
-	pwmControl(STRENGTH_SERVO, MALLET_DOWN);
 	unsigned char ii = 0x01;
 	pwmControl(HBRIDGE_EN, LIFT_UP);
 	HBRIDGE_OUT |= LIFT_DIR1;					// DIR1 = HIGH, DIR2 = LOW
+	delayMillis(LED_RISE_DELAY);
 	shiftOut(ii);
 	delayMillis(LED_RISE_DELAY);
 	while (ii < LED_ATTEMPT2)
@@ -522,10 +527,10 @@ void state_strength2(unsigned char *operation)
 
 void state_strength3(unsigned char *operation)
 {
-	pwmControl(STRENGTH_SERVO, MALLET_DOWN);
 	unsigned char ii = 0x01;
 	pwmControl(HBRIDGE_EN, LIFT_UP);
 	HBRIDGE_OUT |= LIFT_DIR1;					// DIR1 = HIGH, DIR2 = LOW
+	delayMillis(LED_RISE_DELAY);
 	shiftOut(ii);
 	delayMillis(LED_RISE_DELAY);
 	while (ii < LED_ATTEMPT3)
@@ -539,10 +544,10 @@ void state_strength3(unsigned char *operation)
 
 void state_strength(unsigned char max_led, unsigned char *operation)
 {
-	pwmControl(STRENGTH_SERVO, MALLET_DOWN);
 	unsigned char ii = 0x01;
 	pwmControl(HBRIDGE_EN, LIFT_UP);
 	HBRIDGE_OUT |= LIFT_DIR1;					// DIR1 = HIGH, DIR2 = LOW
+	delayMillis(LED_RISE_DELAY);
 	shiftOut(ii);
 	delayMillis(LED_RISE_DELAY);
 	while (ii < max_led)
@@ -588,8 +593,6 @@ void state_strength(unsigned char max_led, unsigned char *operation)
 
 void state_post_strength(unsigned char *operation)
 {
-	HBRIDGE_OUT &= ~LIFT_DIR1;					// DIR1 = LOW, DIR2 = LOW
-	pwmControl(HBRIDGE_EN, LIFT_DOWN);
 	TakeADCMeas();
 	if(ADCResult < FSR_TRIGGER)
 		*operation = FINISHED_OPERATION;

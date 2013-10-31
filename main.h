@@ -1,6 +1,8 @@
 #include "msp430fr5739.h"
 #include <stdio.h>
 
+typedef enum { FALSE, TRUE } boolean;
+
 /***********************************
  * Delays (milliseconds)
  ***********************************/
@@ -79,6 +81,7 @@
 #define DUCK_IR BIT0
 #define STRENGTH_IR BIT1
 
+#define MAX_READINGS 10
 #define IR_DUCK_TRIGGER 385
 #define IR_LIFT_TRIGGER 435
 #define FSR_TRIGGER 900	// Port1 = 900, Port3 = 450

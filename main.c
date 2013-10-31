@@ -53,6 +53,7 @@ void shiftOut(unsigned char in_data)
 	unsigned char ii;
 	for (ii = 0; ii < 8; ++ii)
 	{
+		__delay_cycles(100);
 		SHIFTER3_OUT &= ~SHIFT3_SRCK;
 		if (in_data & BIT7)
 			SHIFTER2_OUT |= SHIFT2_SERIN;
@@ -146,6 +147,30 @@ void TakeADCMeas(void)
 	ADC10CTL0 |= ADC10ENC | ADC10SC ;		// Start conversion
 	__bis_SR_register(CPUOFF + GIE);		// LPM0, ADC10_ISR will force exit
 	__no_operation();						// For debug only
+}
+
+boolean isTriggered(unsigned int in_trigger_max)
+{
+	int ii;
+	for (ii = 0; ii < MAX_READINGS; ++ii)
+	{
+		TakeADCMeas();
+		if (ADCResult >= in_trigger_max)
+			return FALSE;
+	}
+	return TRUE;
+}
+
+void debugSensor(unsigned char in_port, unsigned char in_bit, unsigned int in_trigger_max)
+{
+	unsigned char totalTriggers = 0;
+	int ii;
+	SetupADC(in_port, in_bit);
+	for (ii = 0; ii < 100; ++ii)
+	{
+		totalTriggers += isTriggered(in_trigger_max);
+	}
+	printf("%u\n", totalTriggers);
 }
 
 int main(void)
@@ -384,11 +409,7 @@ void state_machine(STATE *state, unsigned char operation)
 					GEARED_OUT &= ~GEARED_MOTOR;				// Turn off geared motor
 					HBRIDGE_OUT |= LIFT_DIR2;					// DIR1 = LOW, DIR2 = HIGH
 					SetupADC(SENSOR_PORT3, STRENGTH_IR);
-					TakeADCMeas();
-					while (ADCResult >= IR_LIFT_TRIGGER)
-					{
-						TakeADCMeas();
-					}
+					while (!isTriggered(IR_LIFT_TRIGGER));
 					delayMillis(LIFT_DELAY);
 					HBRIDGE_OUT &= ~LIFT_DIR2;					// DIR1 = LOW, DIR2 = LOW
 					SetupADC(SENSOR_PORT1, ENTRY_FSR);
@@ -402,8 +423,7 @@ void state_machine(STATE *state, unsigned char operation)
 
 void state_idle(unsigned char *operation)
 {
-	TakeADCMeas();
-	if(ADCResult < FSR_TRIGGER)
+	if (isTriggered(FSR_TRIGGER))
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;
@@ -411,8 +431,7 @@ void state_idle(unsigned char *operation)
 
 void state_ferris(unsigned char *operation)
 {
-	TakeADCMeas();
-	if(ADCResult < FSR_TRIGGER)
+	if (isTriggered(FSR_TRIGGER))
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;
@@ -420,8 +439,7 @@ void state_ferris(unsigned char *operation)
 
 void state_pre_ducks(unsigned char *operation)
 {
-	TakeADCMeas();
-	if(ADCResult < IR_DUCK_TRIGGER)
+	if (isTriggered(IR_DUCK_TRIGGER))
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;
@@ -448,8 +466,7 @@ void state_duck3(unsigned char *operation)
 void state_pre_strength(unsigned char *operation)
 {
 	pwmControl(STRENGTH_SERVO, MALLET1_UP);
-	TakeADCMeas();
-	if(ADCResult < IR_LIFT_TRIGGER)
+	if (isTriggered(IR_LIFT_TRIGGER))
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;
@@ -480,11 +497,7 @@ void state_strength1(unsigned char *operation)
 		delayMillis(LED_FALL_DELAY);
 	}
 	pwmControl(STRENGTH_SERVO, MALLET2_UP);
-	TakeADCMeas();
-	while (ADCResult >= IR_LIFT_TRIGGER)
-	{
-		TakeADCMeas();
-	}
+	while (!isTriggered(IR_LIFT_TRIGGER));
 	delayMillis(LIFT_DELAY);
 	HBRIDGE_OUT &= ~LIFT_DIR2;					// DIR1 = LOW, DIR2 = LOW
 	*operation = FINISHED_OPERATION;
@@ -515,11 +528,7 @@ void state_strength2(unsigned char *operation)
 		delayMillis(LED_FALL_DELAY);
 	}
 	pwmControl(STRENGTH_SERVO, MALLET3_UP);
-	TakeADCMeas();
-	while (ADCResult >= IR_LIFT_TRIGGER)
-	{
-		TakeADCMeas();
-	}
+	while (!isTriggered(IR_LIFT_TRIGGER));
 	delayMillis(LIFT_DELAY);
 	HBRIDGE_OUT &= ~LIFT_DIR2;					// DIR1 = LOW, DIR2 = LOW
 	*operation = FINISHED_OPERATION;
@@ -593,8 +602,7 @@ void state_strength(unsigned char max_led, unsigned char *operation)
 
 void state_post_strength(unsigned char *operation)
 {
-	TakeADCMeas();
-	if(ADCResult < FSR_TRIGGER)
+	if (isTriggered(FSR_TRIGGER))
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;

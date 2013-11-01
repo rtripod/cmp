@@ -60,6 +60,7 @@ void shiftOut(unsigned char in_data)
 		else
 			SHIFTER2_OUT &= ~SHIFT2_SERIN;
 		in_data = in_data << 1;
+		__delay_cycles(100);
 		SHIFTER3_OUT |= SHIFT3_SRCK;
 	}
 	SHIFTER3_OUT |= SHIFT3_RCK;

@@ -37,7 +37,7 @@ typedef enum { FALSE, TRUE } boolean;
 #define DUCK2_UP 700
 #define DUCK3_UP 600
 
-#define DUCK1_DOWN 1500
+#define DUCK1_DOWN 1300
 #define DUCK2_DOWN 1400
 #define DUCK3_DOWN 1300
 
@@ -81,7 +81,7 @@ typedef enum { FALSE, TRUE } boolean;
 #define DUCK_IR BIT0
 #define STRENGTH_IR BIT1
 
-#define MAX_READINGS 10
+#define MAX_READINGS 100
 #define IR_DUCK_TRIGGER 385
 #define IR_LIFT_TRIGGER 435
 #define FSR_TRIGGER 900	// Port1 = 900, Port3 = 450

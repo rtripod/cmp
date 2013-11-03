@@ -7,7 +7,7 @@ typedef enum { FALSE, TRUE } boolean;
  * Delays (milliseconds)
  ***********************************/
 #define DEFAULT_DELAY 50
-#define DUCK_DELAY 100
+#define DUCK_DELAY 300
 #define LED_RISE_DELAY 200
 #define LED_FALL_DELAY (int)((float)LED_RISE_DELAY*1.2 + 0.5)
 #define LIFT_DELAY 2
@@ -41,25 +41,22 @@ typedef enum { FALSE, TRUE } boolean;
 #define DUCK2_DOWN 1400
 #define DUCK3_DOWN 1300
 
-#define MALLET1_UP 1400
-#define MALLET2_UP 1800
-#define MALLET3_UP 2200
-#define MALLET_DOWN 800
+#define MALLET1_UP 1000
+#define MALLET2_UP 800
+#define MALLET3_UP 600
+#define MALLET_DOWN 2200
 
 /***********************************
- *	H-Bridge Motors: P2.1
+ *	H-Bridge
  ***********************************/
 #define HBRIDGE_DIR P2DIR
 #define HBRIDGE_SEL0 P2SEL0
 #define HBRIDGE_OUT P2OUT
-#define HBRIDGE_EN BIT1
 
-// Lift motor: P2.0, P2.2
+// Lift motor: P2.0, P2.1, P2.5
 #define LIFT_DIR1 BIT0
-#define LIFT_DIR2 BIT2
-
-// Wave motor: P2.5
-#define WAVE_DIR BIT5
+#define LIFT_EN BIT1
+#define LIFT_DIR2 BIT5
 
 // PWM values
 #define HBRIDGE_PERIOD 499		// 500 - 1
@@ -84,7 +81,7 @@ typedef enum { FALSE, TRUE } boolean;
 #define MAX_READINGS 100
 #define IR_DUCK_TRIGGER 385
 #define IR_LIFT_TRIGGER 435
-#define FSR_TRIGGER 900	// Port1 = 900, Port3 = 450
+#define FSR_TRIGGER 800	// Port1 = 900, Port3 = 450
 
 /***********************************
  *	8bit Shifter: P2.6, P3.2, P3.3, 

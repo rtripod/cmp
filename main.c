@@ -301,7 +301,7 @@ void state_machine(STATE *state, unsigned char operation)
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
-					delayMillis(DUCK_DELAY);
+					delayMillis(DUCK1_DELAY);
 					*state = DUCK1;
 					STATE_OUT = *state;							// FPGA: Play duck SFX
 					break;
@@ -312,7 +312,7 @@ void state_machine(STATE *state, unsigned char operation)
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
-					delayMillis(DUCK_DELAY);
+					delayMillis(DUCK2_DELAY);
 					*state = DUCK2;
 					STATE_OUT = *state;							// FPGA: Play duck SFX
 					break;
@@ -323,7 +323,7 @@ void state_machine(STATE *state, unsigned char operation)
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
-					delayMillis(DUCK_DELAY);
+					delayMillis(DUCK3_DELAY);
 					*state = DUCK3;
 					STATE_OUT = *state;							// FPGA: Play duck SFX
 					break;
@@ -334,9 +334,9 @@ void state_machine(STATE *state, unsigned char operation)
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
-					delayMillis(DUCK_DELAY*2);
 					*state = PRE_STRENGTH;
 					STATE_OUT = *state;							// FPGA: Dim duck LEDs
+					delayMillis(DUCK2_DELAY*2);
 					SetupADC(SENSOR_PORT3, STRENGTH_IR);
 					break;
 				default: break;
@@ -346,6 +346,7 @@ void state_machine(STATE *state, unsigned char operation)
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
+					delayMillis(STRENGTH_DELAY/2);
 					pwmControl(STRENGTH_SERVO, MALLET_DOWN);
 					*state = STRENGTH1;
 					STATE_OUT = *state;							// FPGA: Play mallet SFX
@@ -357,6 +358,7 @@ void state_machine(STATE *state, unsigned char operation)
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
+					delayMillis(STRENGTH_DELAY/2);
 					pwmControl(STRENGTH_SERVO, MALLET_DOWN);
 					*state = STRENGTH2;
 					STATE_OUT = *state;							// FPGA: Play mallet SFX
@@ -368,6 +370,7 @@ void state_machine(STATE *state, unsigned char operation)
 			switch(operation)
 			{
 				case FINISHED_OPERATION:
+					delayMillis(STRENGTH_DELAY/2);
 					pwmControl(STRENGTH_SERVO, MALLET_DOWN);
 					*state = STRENGTH3;
 					STATE_OUT = *state;							// FPGA: Play mallet SFX
@@ -381,6 +384,7 @@ void state_machine(STATE *state, unsigned char operation)
 				case FINISHED_OPERATION:
 					*state = POST_STRENGTH;
 					STATE_OUT = *state;							// FPGA: Play bell SFX
+					delayMillis(LIFT_DELAY*2.5);
 					HBRIDGE_OUT &= ~LIFT_DIR1;					// DIR1 = LOW, DIR2 = LOW
 					pwmControl(LIFT_EN, LIFT_DOWN);
 					SetupADC(SENSOR_PORT1, EXIT_FSR);
@@ -400,9 +404,9 @@ void state_machine(STATE *state, unsigned char operation)
 					for (ii = 0; ii < 3; ++ii)
 					{
 						shiftOut(0x00);
-						delayMillis(LED_RISE_DELAY);
+						delayMillis(LED_RISE_DELAY/2);
 						shiftOut(0xFF);
-						delayMillis(LED_RISE_DELAY);
+						delayMillis(LED_RISE_DELAY/2);
 					}
 					shiftOut(0x00);
 					pwmControl(DUCK1_SERVO, DUCK1_UP);
@@ -410,7 +414,7 @@ void state_machine(STATE *state, unsigned char operation)
 					pwmControl(DUCK3_SERVO, DUCK3_UP);
 					GEARED_OUT &= ~GEARED_MOTOR;				// Turn off geared motor
 					while (!isTriggered(IR_LIFT_TRIGGER));
-					delayMillis(LIFT_DELAY);
+					delayMillis(LIFT_DELAY*0.9);
 					HBRIDGE_OUT &= ~LIFT_DIR2;					// DIR1 = LOW, DIR2 = LOW
 					pwmControl(LIFT_EN, 0);
 					SetupADC(SENSOR_PORT1, ENTRY_FSR);
@@ -424,7 +428,7 @@ void state_machine(STATE *state, unsigned char operation)
 
 void state_idle(unsigned char *operation)
 {
-	if (isTriggered(FSR_TRIGGER))
+	if (isTriggered(FSR_ENTRY_TRIGGER))
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;
@@ -432,7 +436,7 @@ void state_idle(unsigned char *operation)
 
 void state_ferris(unsigned char *operation)
 {
-	if (isTriggered(FSR_TRIGGER))
+	if (isTriggered(FSR_MIDDLE_TRIGGER))
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;
@@ -467,6 +471,7 @@ void state_duck3(unsigned char *operation)
 
 void state_pre_strength(unsigned char *operation)
 {
+	delayMillis(STRENGTH_DELAY);
 	pwmControl(STRENGTH_SERVO, MALLET1_UP);
 	if (isTriggered(IR_LIFT_TRIGGER))
 		*operation = FINISHED_OPERATION;
@@ -479,7 +484,7 @@ void state_strength1(unsigned char *operation)
 	unsigned char ii = 0x01;
 	pwmControl(LIFT_EN, LIFT_UP);
 	HBRIDGE_OUT |= LIFT_DIR1;					// DIR1 = HIGH, DIR2 = LOW
-	delayMillis(LED_RISE_DELAY);
+	delayMillis(LED_RISE_DELAY*2);
 	shiftOut(ii);
 	delayMillis(LED_RISE_DELAY);
 	while (ii < LED_ATTEMPT1)
@@ -498,10 +503,11 @@ void state_strength1(unsigned char *operation)
 		shiftOut(ii);
 		delayMillis(LED_FALL_DELAY);
 	}
-	pwmControl(STRENGTH_SERVO, MALLET2_UP);
 	while (!isTriggered(IR_LIFT_TRIGGER));
 	delayMillis(LIFT_DELAY);
 	HBRIDGE_OUT &= ~LIFT_DIR2;					// DIR1 = LOW, DIR2 = LOW
+	delayMillis(STRENGTH_DELAY);
+	pwmControl(STRENGTH_SERVO, MALLET2_UP);
 	*operation = FINISHED_OPERATION;
 }
 
@@ -510,7 +516,7 @@ void state_strength2(unsigned char *operation)
 	unsigned char ii = 0x01;
 	pwmControl(LIFT_EN, LIFT_UP);
 	HBRIDGE_OUT |= LIFT_DIR1;					// DIR1 = HIGH, DIR2 = LOW
-	delayMillis(LED_RISE_DELAY);
+	delayMillis(LED_RISE_DELAY*2);
 	shiftOut(ii);
 	delayMillis(LED_RISE_DELAY);
 	while (ii < LED_ATTEMPT2)
@@ -529,10 +535,11 @@ void state_strength2(unsigned char *operation)
 		shiftOut(ii);
 		delayMillis(LED_FALL_DELAY);
 	}
-	pwmControl(STRENGTH_SERVO, MALLET3_UP);
 	while (!isTriggered(IR_LIFT_TRIGGER));
 	delayMillis(LIFT_DELAY);
 	HBRIDGE_OUT &= ~LIFT_DIR2;					// DIR1 = LOW, DIR2 = LOW
+	delayMillis(STRENGTH_DELAY);
+	pwmControl(STRENGTH_SERVO, MALLET3_UP);
 	*operation = FINISHED_OPERATION;
 }
 
@@ -541,7 +548,7 @@ void state_strength3(unsigned char *operation)
 	unsigned char ii = 0x01;
 	pwmControl(LIFT_EN, LIFT_UP);
 	HBRIDGE_OUT |= LIFT_DIR1;					// DIR1 = HIGH, DIR2 = LOW
-	delayMillis(LED_RISE_DELAY);
+	delayMillis(LED_RISE_DELAY*2);
 	shiftOut(ii);
 	delayMillis(LED_RISE_DELAY);
 	while (ii < LED_ATTEMPT3)
@@ -555,7 +562,7 @@ void state_strength3(unsigned char *operation)
 
 void state_post_strength(unsigned char *operation)
 {
-	if (isTriggered(FSR_TRIGGER))
+	if (isTriggered(FSR_EXIT_TRIGGER))
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;

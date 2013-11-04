@@ -7,10 +7,15 @@ typedef enum { FALSE, TRUE } boolean;
  * Delays (milliseconds)
  ***********************************/
 #define DEFAULT_DELAY 50
-#define DUCK_DELAY 300
+
+#define DUCK1_DELAY 300*0.5
+#define DUCK2_DELAY 390*0.5
+#define DUCK3_DELAY 390*0.5
+
+#define STRENGTH_DELAY 1500
 #define LED_RISE_DELAY 200
 #define LED_FALL_DELAY (int)((float)LED_RISE_DELAY*1.2 + 0.5)
-#define LIFT_DELAY 2
+#define LIFT_DELAY 300
 
 /***********************************
  *	Geared motor: P4.0
@@ -60,8 +65,8 @@ typedef enum { FALSE, TRUE } boolean;
 
 // PWM values
 #define HBRIDGE_PERIOD 499		// 500 - 1
-#define LIFT_UP 499				// Full speed
-#define LIFT_DOWN (int)((float)LIFT_UP*0.3*(float)LED_RISE_DELAY/(float)LED_FALL_DELAY + 0.5) // Descend same speed fraction as LEDs
+#define LIFT_UP 250				// Full speed
+#define LIFT_DOWN (int)((float)LIFT_UP*0.5*(float)LED_RISE_DELAY/(float)LED_FALL_DELAY + 0.5) // Descend same speed fraction as LEDs
 
 /***********************************
  *	Sensors
@@ -75,13 +80,15 @@ typedef enum { FALSE, TRUE } boolean;
 #define EXIT_FSR BIT5
 
 // Line sensor: P3.0, P3.1
-#define DUCK_IR BIT0
-#define STRENGTH_IR BIT1
+#define DUCK_IR BIT1
+#define STRENGTH_IR BIT0
 
 #define MAX_READINGS 100
-#define IR_DUCK_TRIGGER 385
+#define IR_DUCK_TRIGGER 415
 #define IR_LIFT_TRIGGER 435
-#define FSR_TRIGGER 800	// Port1 = 900, Port3 = 450
+#define FSR_ENTRY_TRIGGER 800	// Port1 = 900, Port3 = 450
+#define FSR_MIDDLE_TRIGGER 950
+#define FSR_EXIT_TRIGGER 980
 
 /***********************************
  *	8bit Shifter: P2.6, P3.2, P3.3, 

@@ -53,14 +53,14 @@ void shiftOut(unsigned char in_data)
 	unsigned char ii;
 	for (ii = 0; ii < 8; ++ii)
 	{
-		__delay_cycles(100);
+		__delay_cycles(20);
 		SHIFTER3_OUT &= ~SHIFT3_SRCK;
 		if (in_data & BIT7)
 			SHIFTER2_OUT |= SHIFT2_SERIN;
 		else
 			SHIFTER2_OUT &= ~SHIFT2_SERIN;
 		in_data = in_data << 1;
-		__delay_cycles(100);
+		__delay_cycles(20);
 		SHIFTER3_OUT |= SHIFT3_SRCK;
 	}
 	SHIFTER3_OUT |= SHIFT3_RCK;
@@ -491,6 +491,7 @@ void state_strength1(unsigned char *operation)
 	{
 		ii = (ii << 1) + 0x01;
 		shiftOut(ii);
+                shiftOut(ii);
 		delayMillis(LED_RISE_DELAY);
 	}
 	HBRIDGE_OUT &= ~LIFT_DIR1;					// DIR1 = LOW, DIR2 = LOW
@@ -501,6 +502,7 @@ void state_strength1(unsigned char *operation)
 	{
 		ii = (ii >> 1);
 		shiftOut(ii);
+                shiftOut(ii);
 		delayMillis(LED_FALL_DELAY);
 	}
 	while (!isTriggered(IR_LIFT_TRIGGER));
@@ -523,6 +525,7 @@ void state_strength2(unsigned char *operation)
 	{
 		ii = (ii << 1) + 0x01;
 		shiftOut(ii);
+                shiftOut(ii);
 		delayMillis(LED_RISE_DELAY);
 	}
 	HBRIDGE_OUT &= ~LIFT_DIR1;					// DIR1 = LOW, DIR2 = LOW
@@ -533,6 +536,7 @@ void state_strength2(unsigned char *operation)
 	{
 		ii = (ii >> 1);
 		shiftOut(ii);
+                shiftOut(ii);
 		delayMillis(LED_FALL_DELAY);
 	}
 	while (!isTriggered(IR_LIFT_TRIGGER));
@@ -554,6 +558,7 @@ void state_strength3(unsigned char *operation)
 	while (ii < LED_ATTEMPT3)
 	{
 		ii = (ii << 1) + 0x01;
+                shiftOut(ii);
 		shiftOut(ii);
 		delayMillis(LED_RISE_DELAY);
 	}

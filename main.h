@@ -86,7 +86,7 @@ typedef enum { FALSE, TRUE } boolean;
 #define MAX_READINGS 100
 #define IR_DUCK_TRIGGER 415
 #define IR_LIFT_TRIGGER 435
-#define FSR_ENTRY_TRIGGER 800	// Port1 = 900, Port3 = 450
+#define FSR_ENTRY_TRIGGER 850	// Port1 = 900, Port3 = 450
 #define FSR_MIDDLE_TRIGGER 900
 #define FSR_EXIT_TRIGGER 980
 

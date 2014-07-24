@@ -1,5 +1,9 @@
 #include "main.h"
 
+// IAR compiler does not recognize the #IFDEF preprocessing directive.
+#define IGNORE_EXIT_FSR TRUE
+#define IGNORE_LIFT_IR_BALL_TRIGGER TRUE	// Ignore first trigger of the lift IR
+
 void delayMillis(unsigned int delay)
 {
 	while (delay--)
@@ -473,10 +477,14 @@ void state_pre_strength(unsigned char *operation)
 {
 	delayMillis(STRENGTH_DELAY);
 	pwmControl(STRENGTH_SERVO, MALLET1_UP);
+if (IGNORE_LIFT_IR_BALL_TRIGGER)
+	*operation = FINISHED_OPERATION;
+else {
 	if (isTriggered(IR_LIFT_TRIGGER))
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;
+}
 }
 
 void state_strength1(unsigned char *operation)
@@ -567,10 +575,14 @@ void state_strength3(unsigned char *operation)
 
 void state_post_strength(unsigned char *operation)
 {
+if (IGNORE_EXIT_FSR)
+	*operation = FINISHED_OPERATION;
+else {
 	if (isTriggered(FSR_EXIT_TRIGGER))
 		*operation = FINISHED_OPERATION;
 	else
 		*operation = CONTINUE_OPERATION;
+}
 }
 
 #pragma vector=ADC10_VECTOR

@@ -71,6 +71,9 @@ typedef enum { FALSE, TRUE } boolean;
 /***********************************
  *	Sensors
  ***********************************/
+// Decreasing trigger values decreases sensor sensitivity.
+// Trigger values are different between Ports 1 and 3:
+//			eg. Port1_TRIGGER = 900 <-> Port3_TRIGGER = 450
 #define SENSOR_PORT1 1
 #define SENSOR_PORT3 3
 
@@ -79,15 +82,15 @@ typedef enum { FALSE, TRUE } boolean;
 #define PRE_DUCKS_FSR BIT3
 #define EXIT_FSR BIT5
 
-// Line sensor: P3.0, P3.1
+// IR/Line sensor: P3.0, P3.1
 #define DUCK_IR BIT1
 #define STRENGTH_IR BIT0
 
 #define MAX_READINGS 100
-#define IR_DUCK_TRIGGER 415
+#define IR_DUCK_TRIGGER 410
 #define IR_LIFT_TRIGGER 435
-#define FSR_ENTRY_TRIGGER 850	// Port1 = 900, Port3 = 450
-#define FSR_MIDDLE_TRIGGER 900
+#define FSR_ENTRY_TRIGGER 850
+#define FSR_MIDDLE_TRIGGER 890
 #define FSR_EXIT_TRIGGER 980
 
 /***********************************
